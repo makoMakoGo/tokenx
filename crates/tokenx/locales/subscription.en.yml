@@ -41,6 +41,7 @@ subscription:
     cache_unsupported_schema: "subscription cache `%{path}` has unsupported schema `%{schema}`"
     cache_unsupported_version: "subscription cache `%{path}` has unsupported version %{version}"
     cache_future_timestamp: "subscription cache `%{path}` has a future timestamp %{timestamp} (current time %{now})"
+    cache_missing_locale: "subscription cache `%{path}` is missing its locale marker"
     claude_read_credentials: "Failed to read Claude credentials from %{path}"
     claude_parse_credentials: "Failed to parse Claude credentials from %{path}"
     claude_no_home_or_keychain: "No Claude credentials found: the home directory is unavailable and the keychain lookup failed: %{error}"

@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
 
-use chrono::{Datelike, Timelike};
+use chrono::{Datelike, Timelike, Weekday};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::tui::actions::ActionSet;
 use crate::tui::data::{ContributionDay, ContributionGrade, DailyClientInfo, DailyUsage};
-use crate::tui::date::format_full_date;
+use crate::tui::date::{format_full_date, month_name, weekday_name};
 use crate::tui::intent::Intent;
 use crate::tui::model::TuiModel;
 use crate::tui::presentation::EmptySubject;
@@ -30,14 +31,30 @@ const CONTRIBUTION_GRADES: [ContributionGrade; 5] = [
 /// Display width of the legend row: labels plus one separating space each,
 /// the grade cells, and the gaps between them.
 fn legend_width(less_label: &str, more_label: &str) -> u16 {
-    less_label.len() as u16
+    UnicodeWidthStr::width(less_label) as u16
         + 1
-        + more_label.len() as u16
+        + UnicodeWidthStr::width(more_label) as u16
         + 1
         + CELL_WIDTH * CONTRIBUTION_GRADES.len() as u16
         + CONTRIBUTION_GRADES.len() as u16
         - 1
 }
+
+fn truncate_to_display_width(label: &str, max_width: usize) -> String {
+    let mut width = 0;
+    label
+        .chars()
+        .take_while(|ch| {
+            let ch_width = UnicodeWidthChar::width(*ch).unwrap_or(0);
+            if width + ch_width > max_width {
+                return false;
+            }
+            width += ch_width;
+            true
+        })
+        .collect()
+}
+
 const GRAPH_PANEL_H: u16 = 14;
 const GRAPH_MIN_H: u16 = 11;
 const DAY_INSIGHTS_MIN_H: u16 = 5;
@@ -46,10 +63,16 @@ const RADAR_MIN_H: u16 = 9;
 const RADAR_MIN_W: u16 = 24;
 const SIDE_BY_SIDE_MIN_W: u16 = 72;
 const LEFT_COL_W: u16 = 44;
-const MONTH_LABELS: &[&str] = &[
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+const WEEKDAYS: [Weekday; 7] = [
+    Weekday::Sun,
+    Weekday::Mon,
+    Weekday::Tue,
+    Weekday::Wed,
+    Weekday::Thu,
+    Weekday::Fri,
+    Weekday::Sat,
 ];
-const DAY_LABELS: &[&str] = &["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_COUNT: usize = 12;
 
 pub fn render(
     frame: &mut Frame,
@@ -155,19 +178,20 @@ fn render_graph(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifac
     let graph_start_y = content.y.saturating_add(1);
     let graph_bottom = content.bottom();
 
-    for (day_idx, label) in DAY_LABELS.iter().enumerate() {
+    for (day_idx, weekday) in WEEKDAYS.iter().copied().enumerate() {
         let is_selected_row = selected_weekday == Some(day_idx);
         if day_idx % 2 == 1 || is_selected_row {
             let y = graph_start_y.saturating_add(day_idx as u16);
             if y < graph_bottom {
+                let label = weekday_name(weekday);
                 let display_label = if is_narrow {
                     if is_selected_row {
-                        &label[..2]
+                        truncate_to_display_width(label.as_ref(), label_width as usize)
                     } else {
-                        ""
+                        String::new()
                     }
                 } else {
-                    *label
+                    label.into_owned()
                 };
                 let style = if is_selected_row {
                     Style::default()
@@ -246,9 +270,17 @@ fn render_graph(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifac
         if let Some(month @ (_, month_idx)) = label_month {
             current_month = Some(month);
             let x = graph_start_x.saturating_add(week_idx as u16 * CELL_WIDTH);
-            let label_x = x.min(content.right().saturating_sub(3));
+            if month_idx >= MONTH_COUNT {
+                continue;
+            }
+            let month_label = month_name((month_idx + 1) as u32, true);
+            let month_width = UnicodeWidthStr::width(month_label.as_ref()) as u16;
+            if month_width == 0 {
+                continue;
+            }
+            let label_x = x.min(content.right().saturating_sub(month_width));
             let too_close = last_label_end.is_some_and(|end: u16| label_x < end.saturating_add(2));
-            if label_x >= graph_start_x && !too_close && month_idx < MONTH_LABELS.len() {
+            if label_x >= graph_start_x && !too_close {
                 let style = if selected_month == Some(month) {
                     Style::default()
                         .fg(app.theme.chrome.current)
@@ -257,10 +289,10 @@ fn render_graph(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifac
                     Style::default().fg(app.theme.text.secondary)
                 };
                 frame.render_widget(
-                    Paragraph::new(MONTH_LABELS[month_idx]).style(style),
-                    Rect::new(label_x, content.y, 3, 1),
+                    Paragraph::new(month_label.into_owned()).style(style),
+                    Rect::new(label_x, content.y, month_width, 1),
                 );
-                last_label_end = Some(label_x.saturating_add(3));
+                last_label_end = Some(label_x.saturating_add(month_width));
             }
         }
     }
@@ -352,7 +384,7 @@ fn render_graph_metrics(
         );
 
         let hint = rust_i18n::t!("tui.ui.stats.graph_hint");
-        let hint_width = hint.len() as u16;
+        let hint_width = UnicodeWidthStr::width(hint.as_ref()) as u16;
         let legend_end = content
             .x
             .saturating_add(legend_width(&less_label, &more_label));
@@ -607,7 +639,7 @@ fn render_day_stats_lines(
         let percentage = model.tokens.saturating_mul(100) / denominator;
         let value = format!("{} ({}%)", format_tokens(model.tokens), percentage);
         let name_budget = (area.width as usize)
-            .saturating_sub(value.chars().count() + 12)
+            .saturating_sub(UnicodeWidthStr::width(value.as_str()) + 12)
             .max(4);
         let model_color = app.model_color(&model.canonical_id);
         rows.push(StatRow::KeyVal(
@@ -643,7 +675,7 @@ fn render_day_stats_lines(
             let value = format!("{} ({}%)", format_tokens(client_tokens), percentage);
             let display_name = get_client_display_name(client);
             let name_budget = (area.width as usize)
-                .saturating_sub(value.chars().count() + 14)
+                .saturating_sub(UnicodeWidthStr::width(value.as_str()) + 14)
                 .max(4);
             rows.push(StatRow::KeyVal(
                 Line::from(vec![
@@ -729,7 +761,7 @@ fn render_day_stats_lines(
             }
             StatRow::KeyVal(left, value) => {
                 frame.render_widget(Paragraph::new(left), Rect::new(area.x, y, area.width, 1));
-                let value_width = value.chars().count() as u16;
+                let value_width = UnicodeWidthStr::width(value.as_str()) as u16;
                 if area.width > value_width {
                     frame.render_widget(
                         Paragraph::new(Line::from(Span::styled(
@@ -1945,5 +1977,16 @@ mod tests {
             has_appeared |= visible;
         }
         assert!(has_appeared);
+    }
+    #[test]
+    fn legend_width_uses_terminal_display_width() {
+        assert_eq!(legend_width("少", "更多"), 22);
+        assert_eq!(legend_width("Less", "More"), 24);
+    }
+
+    #[test]
+    fn narrow_weekday_labels_truncate_at_character_boundaries() {
+        assert_eq!(truncate_to_display_width("周二", 2), "周");
+        assert_eq!(truncate_to_display_width("Tue", 2), "Tu");
     }
 }

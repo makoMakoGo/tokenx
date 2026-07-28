@@ -179,6 +179,12 @@ pub struct Settings {
     pub language: Option<Language>,
 }
 
+#[derive(Debug, Deserialize)]
+struct LanguageSettings {
+    #[serde(default)]
+    language: Option<Language>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SubscriptionSettings {
@@ -248,6 +254,29 @@ impl Settings {
         Ok(path)
     }
 
+    fn load_language_from_path(
+        path: &Path,
+    ) -> std::result::Result<Option<Language>, SettingsLoadError> {
+        let content = match fs::read(path) {
+            Ok(content) => content,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => {
+                return Err(SettingsLoadError::Read {
+                    path: path.to_path_buf(),
+                    source: error,
+                });
+            }
+        };
+
+        let settings = serde_json::from_slice::<LanguageSettings>(&content).map_err(|source| {
+            SettingsLoadError::Parse {
+                path: path.to_path_buf(),
+                source,
+            }
+        })?;
+        Ok(settings.language)
+    }
+
     fn load_from_path(path: &Path) -> std::result::Result<Self, SettingsLoadError> {
         let content = match fs::read(path) {
             Ok(content) => content,
@@ -279,6 +308,16 @@ impl Settings {
     pub fn load(paths: &ProductPaths) -> std::result::Result<Self, SettingsLoadError> {
         let path = paths.settings_file();
         Self::load_from_path(&path)
+    }
+
+    /// Read only the optional language override without validating unrelated
+    /// settings. Startup uses this best-effort value before Clap parses the
+    /// command line; [`Self::load`] remains authoritative for execution.
+    pub(crate) fn load_language(
+        paths: &ProductPaths,
+    ) -> std::result::Result<Option<Language>, SettingsLoadError> {
+        let path = paths.settings_file();
+        Self::load_language_from_path(&path)
     }
 
     pub fn save(&self, paths: &ProductPaths) -> Result<()> {
@@ -726,6 +765,26 @@ mod tests {
         let absent: Settings = serde_json::from_str(r#"{"colorPalette":"blue"}"#).unwrap();
         assert_eq!(absent.language, None);
         assert_eq!(Settings::default().language, None);
+    }
+
+    #[test]
+    fn early_language_load_ignores_unrelated_invalid_settings() {
+        let temp = tempfile::TempDir::new().unwrap();
+        fs::write(
+            temp.path().join("settings.json"),
+            r#"{"language":"zh-CN","autoRefreshMs":1}"#,
+        )
+        .unwrap();
+        let paths = ProductPaths::at(temp.path());
+
+        assert_eq!(
+            Settings::load_language(&paths).unwrap(),
+            Some(crate::i18n::Language::ZhCn)
+        );
+        assert!(
+            Settings::load(&paths).is_err(),
+            "full settings loading must retain validation authority"
+        );
     }
 
     #[test]

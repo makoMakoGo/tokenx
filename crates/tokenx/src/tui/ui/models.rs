@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Cell, Row, Scrollbar, ScrollbarOrientation, Table};
 
@@ -22,7 +24,7 @@ use crate::tui::presentation::EmptySubject;
 use crate::tui::render_artifacts::RenderArtifacts;
 use tokenx_engine::GroupBy;
 
-fn workspace_label(model: &crate::tui::data::UsageModelEntry) -> &str {
+fn workspace_label(model: &crate::tui::data::UsageModelEntry) -> Cow<'_, str> {
     workspace_label_or_unknown(
         model
             .workspace_label
@@ -51,7 +53,7 @@ fn workspace_content_width<'a>(
     models: impl Iterator<Item = &'a crate::tui::data::UsageModelEntry>,
 ) -> u16 {
     models
-        .map(|model| display_width(workspace_label(model)))
+        .map(|model| display_width(workspace_label(model).as_ref()))
         .max()
         .unwrap_or(WORKSPACE_MIN_WIDTH)
 }
@@ -278,7 +280,7 @@ pub fn render(
             let cell_for_column = |column: ModelsColumn| -> Cell {
                 match column {
                     ModelsColumn::Workspace => Cell::from(truncate_display_width(
-                        workspace_label(model),
+                        workspace_label(model).as_ref(),
                         table_layout.width_for(ModelsColumn::Workspace),
                     ))
                     .style(Style::default().fg(theme_secondary)),

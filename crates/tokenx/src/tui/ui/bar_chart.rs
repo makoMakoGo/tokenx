@@ -136,16 +136,17 @@ pub fn render_stacked_bar_chart(
             max = compact_tokens(max_value as u64)
         )
         .into_owned();
-        let peak_width = peak_label.chars().count() as u16;
+        let peak_width = UnicodeWidthStr::width(peak_label.as_str()) as u16;
         if area.width >= peak_width + 2 {
             let peak_x = area.x + area.width - peak_width;
-            for (i, ch) in peak_label.chars().enumerate() {
-                buf[(peak_x + i as u16, area.y)].set_char(ch).set_style(
-                    Style::default()
-                        .fg(app.theme.text.secondary)
-                        .bg(app.theme.surface.panel),
-                );
-            }
+            buf.set_string(
+                peak_x,
+                area.y,
+                &peak_label,
+                Style::default()
+                    .fg(app.theme.text.secondary)
+                    .bg(app.theme.surface.panel),
+            );
         }
     }
 

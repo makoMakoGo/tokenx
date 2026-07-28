@@ -945,7 +945,6 @@ mod tests {
 
     #[test]
     fn favorite_model_family_identity_uses_one_brand_color() {
-        rust_i18n::set_locale("en");
         let width = 60;
         let height = 30;
         let mut app = make_app(width);

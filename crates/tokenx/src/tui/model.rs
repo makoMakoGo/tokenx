@@ -243,6 +243,21 @@ pub enum SortDirection {
     Descending,
 }
 
+fn sort_field_label(field: SortField) -> Cow<'static, str> {
+    match field {
+        SortField::Cost => rust_i18n::t!("tui.model.sort.field.cost"),
+        SortField::Tokens => rust_i18n::t!("tui.model.sort.field.tokens"),
+        SortField::Date => rust_i18n::t!("tui.model.sort.field.date"),
+    }
+}
+
+fn sort_direction_label(direction: SortDirection) -> Cow<'static, str> {
+    match direction {
+        SortDirection::Ascending => rust_i18n::t!("tui.model.sort.direction.ascending"),
+        SortDirection::Descending => rust_i18n::t!("tui.model.sort.direction.descending"),
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ModelOrderKey {
     usage_revision: u64,
@@ -2042,8 +2057,8 @@ impl TuiModel {
         }
         self.set_status(&rust_i18n::t!(
             "tui.model.status.sorted_by",
-            field = format!("{:?}", self.sort_field),
-            direction = format!("{:?}", self.sort_direction)
+            field = sort_field_label(self.sort_field),
+            direction = sort_direction_label(self.sort_direction)
         ));
     }
 

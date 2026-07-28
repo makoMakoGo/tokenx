@@ -21,6 +21,15 @@ tui:
       agents_short: "Agt"
       sessions: "Sessions"
       sessions_short: "Ses"
+    sort:
+      field:
+        cost: "Cost"
+        tokens: "Tokens"
+        date: "Date"
+      direction:
+        ascending: "Ascending"
+        descending: "Descending"
+    unknown_workspace: "Unknown workspace"
     pricing:
       cached_fallback: "Pricing refresh failed; using cached rates"
       unavailable: "Pricing unavailable; costs may be missing"

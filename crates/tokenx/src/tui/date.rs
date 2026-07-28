@@ -121,6 +121,18 @@ pub(crate) fn format_timestamp(datetime: NaiveDateTime) -> String {
     )
     .into_owned()
 }
+pub(crate) fn format_clock_time(datetime: NaiveDateTime) -> String {
+    let hour = match datetime.hour() % 12 {
+        0 => 12,
+        hour => hour,
+    };
+    let period = if datetime.hour() < 12 {
+        rust_i18n::t!("tui.date.time.am")
+    } else {
+        rust_i18n::t!("tui.date.time.pm")
+    };
+    rust_i18n::t!("tui.date.time.format", hour = hour, period = period).into_owned()
+}
 
 pub(crate) fn format_period_label(
     kind: PeriodKind,
@@ -142,5 +154,33 @@ pub(crate) fn format_period_label(
             end = format_month_day(end)
         )
         .into_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn chinese_full_date_has_only_one_month_suffix() {
+        let rendered = rust_i18n::t!(
+            "tui.date.full_date",
+            locale = "zh-CN",
+            weekday = "周日",
+            month = "1月",
+            day = "02",
+            year = 2026
+        );
+        assert_eq!(rendered, "2026年1月02日（周日）");
+    }
+
+    #[test]
+    fn localized_clock_time_uses_translated_period() {
+        let period = rust_i18n::t!("tui.date.time.am", locale = "zh-CN");
+        let rendered = rust_i18n::t!(
+            "tui.date.time.format",
+            locale = "zh-CN",
+            hour = 9,
+            period = period
+        );
+        assert_eq!(rendered, "上午9点");
     }
 }

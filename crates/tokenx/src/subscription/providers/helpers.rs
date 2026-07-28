@@ -1,5 +1,7 @@
 use anyhow::Result;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, Utc};
+
+use crate::tui::date::{format_clock_time, format_month_day, weekday_name};
 
 pub fn capitalize(s: &str) -> String {
     let mut c = s.chars();
@@ -52,17 +54,15 @@ pub fn format_reset_time(resets_at: &str) -> String {
             rust_i18n::t!("subscription.reset.in_hours", hours = h).to_string()
         }
     } else if diff.num_days() < 7 {
-        rust_i18n::t!(
-            "subscription.reset.at",
-            datetime = format!("{} {}", dt.format("%a"), dt.format("%-I%P"))
-        )
-        .to_string()
+        let datetime = format!(
+            "{} {}",
+            weekday_name(dt.weekday()),
+            format_clock_time(dt.naive_utc())
+        );
+        rust_i18n::t!("subscription.reset.at", datetime = datetime).to_string()
     } else {
-        rust_i18n::t!(
-            "subscription.reset.at",
-            datetime = format!("{}", dt.format("%b %-d"))
-        )
-        .to_string()
+        let datetime = format_month_day(dt.date_naive());
+        rust_i18n::t!("subscription.reset.at", datetime = datetime).to_string()
     }
 }
 

@@ -450,18 +450,21 @@ fn create_conflicting_codex_fixture_dir() -> TempDir {
 /// Build a Command pointing HOME at the given temp dir and hermetic scan env.
 fn cmd_with_home(tmp: &Path) -> Command {
     let mut cmd = cargo_bin_cmd!("tokenx");
+    cmd.args(["--language", "en"]);
     cmd.env("HOME", tmp).env_remove("TOKENX_CONFIG_DIR");
     cmd
 }
 
 fn cmd_with_process_home(tmp: &Path) -> Command {
     let mut cmd = cargo_bin_cmd!("tokenx");
+    cmd.args(["--language", "en"]);
     cmd.env("HOME", tmp);
     cmd
 }
 
 fn offline_cmd_with_home(tmp: &Path) -> Command {
     let mut cmd = cargo_bin_cmd!("tokenx");
+    cmd.args(["--language", "en"]);
     // Pin HOME so Tokenx's `~/.tokenx` product root stays inside the fixture.
     cmd.env("HOME", tmp)
         .env("HTTP_PROXY", "http://127.0.0.1:9")
@@ -564,7 +567,7 @@ fn settings_json_path(base: &Path) -> std::path::PathBuf {
 #[test]
 fn test_help_command() {
     let mut cmd = cargo_bin_cmd!("tokenx");
-    cmd.arg("--help")
+    cmd.args(["--language", "en", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("AI token usage analytics"));
@@ -573,7 +576,7 @@ fn test_help_command() {
 #[test]
 fn test_help_short_flag() {
     let mut cmd = cargo_bin_cmd!("tokenx");
-    cmd.arg("-h")
+    cmd.args(["--language", "en", "-h"])
         .assert()
         .success()
         .stdout(predicate::str::contains("AI token usage analytics"));
@@ -594,8 +597,7 @@ fn test_version_flag() {
 #[test]
 fn test_models_command_help() {
     let mut cmd = cargo_bin_cmd!("tokenx");
-    cmd.arg("models")
-        .arg("--help")
+    cmd.args(["--language", "en", "models", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Show model usage"))
@@ -608,8 +610,7 @@ fn test_models_command_help() {
 #[test]
 fn test_pricing_command_help() {
     let mut cmd = cargo_bin_cmd!("tokenx");
-    cmd.arg("pricing")
-        .arg("--help")
+    cmd.args(["--language", "en", "pricing", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Query model pricing"))
@@ -641,7 +642,7 @@ fn test_cache_prune_surfaces_unknown_shard_magic() {
 
     let mut cmd = cargo_bin_cmd!("tokenx");
     cmd.env("TOKENX_CONFIG_DIR", config_dir.path())
-        .args(["cache", "prune"])
+        .args(["--language", "en", "cache", "prune"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("has unrecognized magic"))
@@ -651,8 +652,7 @@ fn test_cache_prune_surfaces_unknown_shard_magic() {
 #[test]
 fn test_tui_command_help() {
     let mut cmd = cargo_bin_cmd!("tokenx");
-    cmd.arg("tui")
-        .arg("--help")
+    cmd.args(["--language", "en", "tui", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains(
@@ -663,7 +663,7 @@ fn test_tui_command_help() {
 #[test]
 fn test_help_exposes_only_leaf_owned_options() {
     cargo_bin_cmd!("tokenx")
-        .arg("--help")
+        .args(["--language", "en", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("--json").not())
@@ -671,7 +671,7 @@ fn test_help_exposes_only_leaf_owned_options() {
         .stdout(predicate::str::contains("--group-by").not());
 
     cargo_bin_cmd!("tokenx")
-        .args(["models", "--help"])
+        .args(["--language", "en", "models", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("--json"))
@@ -679,7 +679,7 @@ fn test_help_exposes_only_leaf_owned_options() {
         .stdout(predicate::str::contains("--group-by"));
 
     cargo_bin_cmd!("tokenx")
-        .args(["tui", "--help"])
+        .args(["--language", "en", "tui", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("--tab"))
@@ -735,6 +735,8 @@ fn test_models_with_invalid_year() {
 fn test_local_scope_rejects_nonexistent_home() {
     cargo_bin_cmd!("tokenx")
         .args([
+            "--language",
+            "en",
             "models",
             "--home",
             "/definitely/not/a/tokenx/home",
@@ -750,7 +752,14 @@ fn test_local_scope_rejects_nonexistent_home() {
 #[test]
 fn test_date_presets_are_mutually_exclusive() {
     cargo_bin_cmd!("tokenx")
-        .args(["models", "--week", "--month", "--no-spinner"])
+        .args([
+            "--language",
+            "en",
+            "models",
+            "--week",
+            "--month",
+            "--no-spinner",
+        ])
         .assert()
         .code(2)
         .stderr(predicate::str::contains("cannot be used with"));
@@ -796,7 +805,7 @@ fn json_report_suppresses_spinner_without_explicit_no_spinner() {
 #[test]
 fn test_theme_flag_is_owned_by_tui() {
     let mut cmd = cargo_bin_cmd!("tokenx");
-    cmd.args(["tui", "--theme", "blue", "--help"])
+    cmd.args(["--language", "en", "tui", "--theme", "blue", "--help"])
         .assert()
         .success();
 
@@ -836,7 +845,7 @@ fn test_tui_accepts_every_canonical_theme_before_terminal_validation() {
 #[test]
 fn test_tui_rejects_unknown_theme_and_lists_valid_values() {
     let output = cargo_bin_cmd!("tokenx")
-        .args(["tui", "--theme", "ultraviolet"])
+        .args(["--language", "en", "tui", "--theme", "ultraviolet"])
         .output()
         .unwrap();
 
@@ -2104,7 +2113,7 @@ fn cache_warm_writes_to_canonical_path() {
 
     cmd_with_home(tmp.path())
         .env("TOKENX_CONFIG_DIR", &config_dir)
-        .args(["--language", "en", "cache", "warm", "--client", "opencode"])
+        .args(["cache", "warm", "--client", "opencode"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Generation cache warmed"));

@@ -72,19 +72,20 @@ fn configure_allocator() -> std::io::Result<()> {
 }
 
 fn run(runtime: &tokio::runtime::Runtime) -> std::result::Result<ExecutionOutcome, CliFailure> {
+    // Clap owns validation and error reporting, but raw scanning lets us set
+    // the locale before Clap renders help or a parse error.
+    let cli_language = i18n::scan_cli_language(std::env::args_os());
+    let settings_language = load_settings_language();
+    i18n::init(cli_language, settings_language);
+
     let cli = Cli::parse_from_env();
-    // Locale selection happens before any user-facing output. The settings
-    // read here is a best-effort early peek solely for the display language;
-    // execution planning later loads and validates the authoritative snapshot,
-    // so a broken settings file still fails explicitly there.
-    i18n::init(cli.language, load_settings_language());
     let plan = ExecutionPlan::resolve(cli, TerminalState::detect())?;
     execute(plan, runtime)
 }
 
 fn load_settings_language() -> Option<i18n::Language> {
     let paths = product_paths::ProductPaths::resolve().ok()?;
-    settings::Settings::load(&paths).ok()?.language
+    settings::Settings::load_language(&paths).ok().flatten()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -17,6 +17,56 @@
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
+/// Scan raw process arguments for a valid language flag before Clap parses
+/// them. This is intentionally conservative: malformed or unknown values are
+/// ignored so the authoritative Clap parser can report them.
+pub(crate) fn scan_cli_language<I, S>(args: I) -> Option<Language>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let mut args = args.into_iter();
+    args.next();
+
+    while let Some(argument) = args.next() {
+        let argument = argument.as_ref();
+        if argument == std::ffi::OsStr::new("--") {
+            break;
+        }
+
+        if let Some(value) = argument
+            .to_str()
+            .and_then(|argument| argument.strip_prefix("--language="))
+        {
+            if let Some(language) = parse_language_value(value) {
+                return Some(language);
+            }
+            continue;
+        }
+
+        if argument != std::ffi::OsStr::new("--language") {
+            continue;
+        }
+
+        let Some(value) = args.next() else {
+            break;
+        };
+        let value = value.as_ref();
+        if value == std::ffi::OsStr::new("--") {
+            break;
+        }
+        if let Some(language) = value.to_str().and_then(parse_language_value) {
+            return Some(language);
+        }
+    }
+
+    None
+}
+
+fn parse_language_value(value: &str) -> Option<Language> {
+    Language::from_str(value, false).ok()
+}
+
 /// Canonical interface languages accepted by `--language` and the
 /// `language` settings key. Unknown spellings are hard parse errors in both
 /// places; there is no silent fallback to English for a mistyped value.
@@ -34,6 +84,7 @@ impl Language {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::En => "en",
+
             Self::ZhCn => "zh-CN",
         }
     }
@@ -84,6 +135,38 @@ fn detect_env_locale_from(lc_all: Option<&str>, lang: Option<&str>) -> &'static 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scans_valid_language_forms_before_and_after_subcommands() {
+        assert_eq!(
+            scan_cli_language(["tokenx", "--language", "zh-CN", "models"]),
+            Some(Language::ZhCn)
+        );
+        assert_eq!(
+            scan_cli_language(["tokenx", "models", "--language=zh-CN"]),
+            Some(Language::ZhCn)
+        );
+        assert_eq!(
+            scan_cli_language(["tokenx", "tui", "--language=en"]),
+            Some(Language::En)
+        );
+    }
+
+    #[test]
+    fn scan_ignores_invalid_values_and_stops_at_separator() {
+        assert_eq!(
+            scan_cli_language(["tokenx", "--language", "unknown", "models"]),
+            None
+        );
+        assert_eq!(
+            scan_cli_language(["tokenx", "--language=unknown", "models"]),
+            None
+        );
+        assert_eq!(
+            scan_cli_language(["tokenx", "--", "--language", "zh-CN"]),
+            None
+        );
+    }
 
     #[test]
     fn cli_language_wins_over_settings_and_environment() {

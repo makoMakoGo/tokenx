@@ -1472,7 +1472,6 @@ mod tests {
 
     #[test]
     fn test_current_count_label_matches_active_tab() {
-        rust_i18n::set_locale("en");
         assert_eq!(
             current_count_label(&make_app_on(Tab::Overview)),
             " (0 models · 0 clients · 0 days)"

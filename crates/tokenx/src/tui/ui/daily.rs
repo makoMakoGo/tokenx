@@ -798,7 +798,7 @@ fn render_detail(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifa
     let workspace_content_width = if group_by == GroupBy::WorkspaceModel {
         rows_data
             .iter()
-            .map(|row| display_width(workspace_label_or_unknown(row.workspace.as_deref())))
+            .map(|row| display_width(workspace_label_or_unknown(row.workspace.as_deref()).as_ref()))
             .max()
             .unwrap_or(WORKSPACE_MIN_WIDTH)
     } else {
@@ -859,7 +859,7 @@ fn render_detail(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifa
             let cell_for_column = |column: DailyDetailColumn| -> Cell {
                 match column {
                     DailyDetailColumn::Workspace => Cell::from(truncate_display_width(
-                        workspace_label_or_unknown(row.workspace.as_deref()),
+                        workspace_label_or_unknown(row.workspace.as_deref()).as_ref(),
                         table_layout.width_for(DailyDetailColumn::Workspace),
                     ))
                     .style(Style::default().fg(theme_secondary)),
