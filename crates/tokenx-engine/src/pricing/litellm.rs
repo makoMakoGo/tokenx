@@ -1,3 +1,4 @@
+use super::lookup::has_any_usable_pricing;
 use super::{cache, emit_warning, PricingDiagnosticSink, PricingDiagnostics};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -59,7 +60,9 @@ async fn fetch_inner(
 ) -> Result<PricingDataset, reqwest::Error> {
     if use_cache {
         if let Some(cached) = load_cached(cache_dir) {
-            return Ok(cached);
+            if cached.values().any(has_any_usable_pricing) {
+                return Ok(cached);
+            }
         }
     }
 
@@ -179,6 +182,26 @@ mod tests {
 
         url
     }
+    fn success_server(body: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+
+        thread::spawn(move || {
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            let mut buffer = [0; 1024];
+            let _ = stream.read(&mut buffer);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = stream.write_all(response.as_bytes());
+        });
+
+        url
+    }
 
     #[tokio::test]
     async fn fetch_returns_error_after_retryable_http_statuses() {
@@ -206,6 +229,23 @@ mod tests {
                 .iter()
                 .any(|diagnostic| diagnostic.message().contains("LiteLLM HTTP 429")),
             "diagnostics missing retryable status: {diagnostics:?}"
+        );
+    }
+    #[tokio::test]
+    async fn fetch_refreshes_an_empty_fresh_cache() {
+        let url = success_server(r#"{"fixture-model":{"input_cost_per_token":0.000001}}"#);
+        let cache_dir = tempfile::TempDir::new().unwrap();
+        cache::save_cache(cache_dir.path(), CACHE_FILENAME, &PricingDataset::new()).unwrap();
+        let mut diagnostics = None;
+
+        let data = fetch_inner(cache_dir.path(), &url, true, &mut diagnostics)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            data.get("fixture-model")
+                .and_then(|pricing| pricing.input_cost_per_token),
+            Some(0.000001)
         );
     }
 

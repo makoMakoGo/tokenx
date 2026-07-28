@@ -80,6 +80,7 @@ fn run(runtime: &tokio::runtime::Runtime) -> std::result::Result<ExecutionOutcom
 
     let cli = Cli::parse_from_env();
     let plan = ExecutionPlan::resolve(cli, TerminalState::detect())?;
+    let plan = runtime.block_on(plan.resolve_pricing_if_unavailable());
     execute(plan, runtime)
 }
 

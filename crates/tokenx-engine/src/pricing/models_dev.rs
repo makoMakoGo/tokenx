@@ -1,4 +1,5 @@
 use super::litellm::ModelPricing;
+use super::lookup::has_any_usable_pricing;
 use super::{cache, emit_warning, PricingDiagnosticSink, PricingDiagnostics};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -66,7 +67,9 @@ async fn fetch_inner(
 ) -> Result<PricingDataset, reqwest::Error> {
     if use_cache {
         if let Some(cached) = load_cached(cache_dir) {
-            return Ok(cached);
+            if cached.values().any(has_any_usable_pricing) {
+                return Ok(cached);
+            }
         }
     }
 

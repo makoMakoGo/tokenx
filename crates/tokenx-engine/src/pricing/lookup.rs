@@ -67,6 +67,11 @@ impl PricingLookup {
             lookup_cache: RwLock::new(HashMap::with_capacity(64)),
         }
     }
+    pub(crate) fn has_usable_pricing(&self) -> bool {
+        [&self.litellm, &self.openrouter, &self.models_dev]
+            .into_iter()
+            .any(|dataset| dataset.values().any(has_any_usable_pricing))
+    }
 
     pub fn lookup(&self, model_id: &str) -> Option<LookupResult> {
         self.lookup_with_provider(model_id, None)
@@ -313,7 +318,7 @@ fn is_valid_price_value(value: f64) -> bool {
     value.is_finite() && value >= 0.0
 }
 
-fn has_any_usable_pricing(pricing: &ModelPricing) -> bool {
+pub(crate) fn has_any_usable_pricing(pricing: &ModelPricing) -> bool {
     [
         pricing.input_cost_per_token,
         pricing.output_cost_per_token,

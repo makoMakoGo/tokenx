@@ -535,6 +535,37 @@ impl ExecutionPlan {
             },
         }
     }
+    /// Fetch public pricing only when the startup snapshot has no usable local catalog.
+    pub(crate) async fn resolve_pricing_if_unavailable(self) -> Self {
+        match self {
+            Self::Tui(mut plan) => {
+                plan.startup = resolve_startup_pricing(plan.startup).await;
+                Self::Tui(plan)
+            }
+            Self::Models(mut plan) => {
+                plan.startup = resolve_startup_pricing(plan.startup).await;
+                Self::Models(plan)
+            }
+            Self::CacheWarm(mut startup) => {
+                startup = resolve_startup_pricing(startup).await;
+                Self::CacheWarm(startup)
+            }
+            other => other,
+        }
+    }
+}
+
+async fn resolve_startup_pricing(mut startup: StartupSnapshot) -> StartupSnapshot {
+    if startup.pricing.service().is_none() {
+        startup.pricing = Arc::new(
+            tokenx_engine::pricing::ResolvedPricingSnapshot::resolve_from_with_fetch(
+                &startup.paths.custom_pricing_file(),
+                &startup.paths.cache_dir(),
+            )
+            .await,
+        );
+    }
+    startup
 }
 
 fn resolve_tui(args: TuiArgs, terminal: TerminalState) -> Result<TuiPlan, CliFailure> {
