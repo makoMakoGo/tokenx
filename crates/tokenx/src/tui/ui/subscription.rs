@@ -50,7 +50,12 @@ pub fn render(
 }
 
 fn render_fetching(frame: &mut Frame, app: &TuiModel, area: Rect) {
-    super::loading::render(frame, app, area, super::loading::FETCHING_SUBSCRIPTION_DATA);
+    super::loading::render(
+        frame,
+        app,
+        area,
+        rust_i18n::t!("tui.ui.loading.fetching_subscription_data"),
+    );
 }
 
 fn render_prompt(frame: &mut Frame, app: &TuiModel, area: Rect) {

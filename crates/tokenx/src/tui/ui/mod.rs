@@ -227,7 +227,12 @@ fn render_loading(frame: &mut Frame, app: &TuiModel, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    loading::render(frame, app, inner, loading::SCANNING_LOCAL_DATA);
+    loading::render(
+        frame,
+        app,
+        inner,
+        rust_i18n::t!("tui.ui.loading.scanning_local_data"),
+    );
 }
 
 #[cfg(test)]

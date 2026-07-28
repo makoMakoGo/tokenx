@@ -5,6 +5,11 @@ tui:
       profile_title: " Hourly Profile "
       projection_failed: "Hourly profile projection failed: %{error}"
       active_hours: "active hours"
+      period:
+        morning: "Morning"
+        daytime: "Daytime"
+        evening: "Evening"
+        night: "Night"
       peak_hour: "Peak hour "
       header:
         hour: "Hour"

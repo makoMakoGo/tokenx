@@ -311,8 +311,10 @@ impl Settings {
     }
 
     /// Read only the optional language override without validating unrelated
-    /// settings. Startup uses this best-effort value before Clap parses the
-    /// command line; [`Self::load`] remains authoritative for execution.
+    /// settings. Startup uses this before Clap parses the command line;
+    /// missing settings return `None`, while malformed or unreadable files
+    /// remain typed load errors. [`Self::load`] remains authoritative for
+    /// execution.
     pub(crate) fn load_language(
         paths: &ProductPaths,
     ) -> std::result::Result<Option<Language>, SettingsLoadError> {
@@ -784,6 +786,31 @@ mod tests {
         assert!(
             Settings::load(&paths).is_err(),
             "full settings loading must retain validation authority"
+        );
+    }
+
+    #[test]
+    fn early_language_load_rejects_unknown_values() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let path = temp.path().join("settings.json");
+        fs::write(&path, r#"{"language":"zh"}"#).unwrap();
+        let error = Settings::load_language(&ProductPaths::at(temp.path())).unwrap_err();
+
+        assert!(matches!(&error, SettingsLoadError::Parse { .. }));
+        assert!(error.is_invalid_environment());
+        let message = format!("{error:#}");
+        assert!(message.contains("parse settings JSON"), "{message}");
+        assert!(message.contains(&path.display().to_string()), "{message}");
+        assert!(message.contains("unknown variant"), "{message}");
+    }
+
+    #[test]
+    fn early_language_load_returns_none_for_missing_settings() {
+        let temp = tempfile::TempDir::new().unwrap();
+
+        assert_eq!(
+            Settings::load_language(&ProductPaths::at(temp.path())).unwrap(),
+            None
         );
     }
 

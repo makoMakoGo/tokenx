@@ -403,7 +403,7 @@ pub(super) fn render_cold_loading(frame: &mut Frame, app: &TuiModel, area: Rect)
         frame,
         app,
         area,
-        Cow::Borrowed(super::loading::SCANNING_LOCAL_DATA),
+        rust_i18n::t!("tui.ui.loading.scanning_local_data"),
         rust_i18n::t!("tui.ui.footer.activity.scanning"),
         app.background_load_elapsed().unwrap_or_default().as_secs(),
     );

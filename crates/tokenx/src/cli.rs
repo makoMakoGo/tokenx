@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use chrono::{Datelike, Duration, NaiveDate};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{
+    error::ErrorKind, Args, Command, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum,
+};
 use tokenx_engine::{CalendarContext, ClientId, ClientUniverse, DateRange, GroupBy};
 
 use crate::commands::shared::{parse_client_id_arg, resolve_client_universe};
@@ -33,8 +35,198 @@ pub(crate) struct Cli {
 impl Cli {
     /// Parse the process arguments from the current command grammar.
     pub(crate) fn parse_from_env() -> Self {
-        Self::parse()
+        let command = localized_command();
+        let matches = command
+            .try_get_matches_from(std::env::args_os())
+            .unwrap_or_else(|error| exit_with_clap_error(error));
+
+        Self::from_arg_matches(&matches).unwrap_or_else(|error| exit_with_clap_error(error))
     }
+}
+
+fn localized_command() -> Command {
+    let mut command = Cli::command();
+    command.build();
+    localize_command_tree(command)
+}
+
+fn localize_command_tree(mut command: Command) -> Command {
+    command = command
+        .help_template(rust_i18n::t!("cli.help.template"))
+        .subcommand_help_heading(rust_i18n::t!("cli.help.commands_heading").into_owned())
+        .mut_args(|arg| {
+            let heading = if arg.get_index().is_some() {
+                rust_i18n::t!("cli.help.arguments_heading").into_owned()
+            } else {
+                rust_i18n::t!("cli.help.options_heading").into_owned()
+            };
+
+            match arg.get_id().as_ref() {
+                "help" => arg
+                    .help(rust_i18n::t!("cli.help.print_help"))
+                    .long_help(rust_i18n::t!("cli.help.print_help_long"))
+                    .help_heading(heading),
+                "version" => arg
+                    .help(rust_i18n::t!("cli.help.print_version"))
+                    .help_heading(heading),
+                "subcommand" => arg
+                    .help(rust_i18n::t!("cli.help.print_subcommand_help"))
+                    .help_heading(heading),
+                _ => arg.help_heading(heading),
+            }
+        });
+
+    if command
+        .get_subcommands()
+        .any(|subcommand| subcommand.get_name() == "help")
+    {
+        command = command.mut_subcommand("help", |subcommand| {
+            subcommand.about(rust_i18n::t!("cli.help.help_subcommand"))
+        });
+    }
+
+    command.mut_subcommands(localize_command_tree)
+}
+
+fn exit_with_clap_error(error: clap::Error) -> ! {
+    let kind = error.kind();
+    let output = localize_clap_output(error.render().to_string());
+    if matches!(
+        kind,
+        ErrorKind::DisplayHelp
+            | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+            | ErrorKind::DisplayVersion
+    ) {
+        print!("{output}");
+    } else {
+        eprint!("{output}");
+    }
+    std::process::exit(error.exit_code());
+}
+
+fn localize_clap_output(mut output: String) -> String {
+    let replacements = [
+        ("error:", rust_i18n::t!("cli.help.generated_error_prefix")),
+        ("Usage:", rust_i18n::t!("cli.help.generated_usage_heading")),
+        (
+            "For more information, try",
+            rust_i18n::t!("cli.help.generated_try_help"),
+        ),
+        (
+            "the following required arguments were not provided:",
+            rust_i18n::t!("cli.help.generated_required_arguments"),
+        ),
+        (
+            "one or more of the other specified arguments",
+            rust_i18n::t!("cli.help.generated_other_arguments"),
+        ),
+        (
+            "some similar arguments exist",
+            rust_i18n::t!("cli.help.generated_some_similar_arguments"),
+        ),
+        (
+            "some similar subcommands exist",
+            rust_i18n::t!("cli.help.generated_some_similar_subcommands"),
+        ),
+        (
+            "some similar values exist",
+            rust_i18n::t!("cli.help.generated_some_similar_values"),
+        ),
+        (
+            "a similar argument exists",
+            rust_i18n::t!("cli.help.generated_similar_argument"),
+        ),
+        (
+            "a similar subcommand exists",
+            rust_i18n::t!("cli.help.generated_similar_subcommand"),
+        ),
+        (
+            "a similar value exists",
+            rust_i18n::t!("cli.help.generated_similar_value"),
+        ),
+        (
+            "cannot be used multiple times",
+            rust_i18n::t!("cli.help.generated_cannot_multiple"),
+        ),
+        (
+            "cannot be used with",
+            rust_i18n::t!("cli.help.generated_cannot_with"),
+        ),
+        (
+            "equal sign is needed when assigning values to",
+            rust_i18n::t!("cli.help.generated_equals"),
+        ),
+        (
+            "a value is required for",
+            rust_i18n::t!("cli.help.generated_value_required"),
+        ),
+        (
+            "but none was supplied",
+            rust_i18n::t!("cli.help.generated_none_supplied"),
+        ),
+        (
+            "requires a subcommand but one was not provided",
+            rust_i18n::t!("cli.help.generated_requires_subcommand"),
+        ),
+        (
+            "unrecognized subcommand",
+            rust_i18n::t!("cli.help.generated_unrecognized_subcommand"),
+        ),
+        (
+            "unexpected argument",
+            rust_i18n::t!("cli.help.generated_unexpected_argument"),
+        ),
+        (
+            "unexpected value",
+            rust_i18n::t!("cli.help.generated_unexpected_value"),
+        ),
+        (
+            "invalid value",
+            rust_i18n::t!("cli.help.generated_invalid_value"),
+        ),
+        (
+            "possible values",
+            rust_i18n::t!("cli.help.generated_possible_values"),
+        ),
+        (
+            "no more were expected",
+            rust_i18n::t!("cli.help.generated_no_more"),
+        ),
+        (
+            "values required by",
+            rust_i18n::t!("cli.help.generated_values_required_by"),
+        ),
+        (
+            "values required for",
+            rust_i18n::t!("cli.help.generated_values_required_for"),
+        ),
+        ("the argument", rust_i18n::t!("cli.help.generated_argument")),
+        (
+            "the subcommand",
+            rust_i18n::t!("cli.help.generated_subcommand"),
+        ),
+        (
+            "subcommands",
+            rust_i18n::t!("cli.help.generated_subcommands"),
+        ),
+        ("only ", rust_i18n::t!("cli.help.generated_only")),
+        (
+            "were provided",
+            rust_i18n::t!("cli.help.generated_were_provided"),
+        ),
+        (
+            "was provided",
+            rust_i18n::t!("cli.help.generated_was_provided"),
+        ),
+        ("tip:", rust_i18n::t!("cli.help.generated_tip")),
+        (" for ", rust_i18n::t!("cli.help.generated_for")),
+        ("found", rust_i18n::t!("cli.help.generated_found")),
+    ];
+
+    for (source, target) in replacements {
+        output = output.replace(source, target.as_ref());
+    }
+    output
 }
 
 #[derive(Subcommand, Debug)]

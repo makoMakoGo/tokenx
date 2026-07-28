@@ -114,6 +114,52 @@ fn static_label(key: &'static str) -> &'static str {
     }
 }
 
+fn period_label_key(label: &str) -> Option<&'static str> {
+    match label {
+        "Morning" => Some("tui.ui.hourly.period.morning"),
+        "Daytime" => Some("tui.ui.hourly.period.daytime"),
+        "Evening" => Some("tui.ui.hourly.period.evening"),
+        "Night" => Some("tui.ui.hourly.period.night"),
+        _ => None,
+    }
+}
+
+fn localized_period_label(label: &str) -> String {
+    localized_period_label_for_locale(label, &rust_i18n::locale())
+}
+
+fn localized_period_label_for_locale(label: &str, locale: &str) -> String {
+    period_label_key(label)
+        .map(|key| rust_i18n::t!(key, locale = locale).into_owned())
+        .unwrap_or_else(|| label.to_string())
+}
+
+#[cfg(test)]
+mod locale_tests {
+    use super::{localized_period_label_for_locale, period_label_key};
+
+    #[test]
+    fn period_labels_have_explicit_locale_translations() {
+        let labels = [
+            ("Morning", "tui.ui.hourly.period.morning", "Morning", "早晨"),
+            ("Daytime", "tui.ui.hourly.period.daytime", "Daytime", "白天"),
+            ("Evening", "tui.ui.hourly.period.evening", "Evening", "傍晚"),
+            ("Night", "tui.ui.hourly.period.night", "Night", "夜间"),
+        ];
+
+        for (raw, key, english, chinese) in labels {
+            assert_eq!(period_label_key(raw), Some(key));
+            assert_eq!(localized_period_label_for_locale(raw, "en"), english);
+            assert_eq!(localized_period_label_for_locale(raw, "zh-CN"), chinese);
+        }
+        assert_eq!(period_label_key("Unexpected"), None);
+        assert_eq!(
+            localized_period_label_for_locale("Unexpected", "zh-CN"),
+            "Unexpected"
+        );
+    }
+}
+
 pub(crate) fn build_hourly_profile_lines(
     app: &TuiModel,
     area_width: u16,
@@ -144,7 +190,7 @@ pub(crate) fn build_hourly_profile_lines(
         lines.push(usage_profile::bar_row(
             app,
             &usage_profile::ProfileBarRow {
-                label: period.label.to_string(),
+                label: localized_period_label(period.label),
                 detail: period.hour_range.to_string(),
                 value: period.total_tokens,
                 max_value: max_period_tokens,

@@ -688,6 +688,74 @@ fn test_help_exposes_only_leaf_owned_options() {
 }
 
 #[test]
+fn test_zh_help_localizes_generated_labels() {
+    cargo_bin_cmd!("tokenx")
+        .args(["--language", "zh-CN", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("用法："))
+        .stdout(predicate::str::contains("命令:"))
+        .stdout(predicate::str::contains("选项:"))
+        .stdout(predicate::str::contains("显示帮助"))
+        .stdout(predicate::str::contains("Usage:").not())
+        .stdout(predicate::str::contains("Commands:").not())
+        .stdout(predicate::str::contains("Options:").not())
+        .stdout(predicate::str::contains("Print help").not());
+}
+
+#[test]
+fn test_zh_repeated_argument_error_is_localized() {
+    cargo_bin_cmd!("tokenx")
+        .args(["--language", "zh-CN", "--language", "zh-CN"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("错误："))
+        .stderr(predicate::str::contains("不能重复使用"))
+        .stderr(predicate::str::contains("用法："))
+        .stderr(predicate::str::contains("如需更多信息，请尝试"))
+        .stderr(predicate::str::contains("cannot be used multiple times").not());
+}
+
+#[test]
+fn test_zh_invalid_value_error_is_localized() {
+    cargo_bin_cmd!("tokenx")
+        .args(["--language", "zh-CN", "models", "--group-by", "bogus"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("错误："))
+        .stderr(predicate::str::contains("无效值"))
+        .stderr(predicate::str::contains("对应于"))
+        .stderr(predicate::str::contains("如需更多信息，请尝试"))
+        .stderr(predicate::str::contains("invalid value").not());
+}
+
+#[test]
+fn test_zh_missing_required_argument_error_is_localized() {
+    cargo_bin_cmd!("tokenx")
+        .args(["--language", "zh-CN", "pricing", "lookup"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("错误："))
+        .stderr(predicate::str::contains("未提供以下必需参数"))
+        .stderr(predicate::str::contains("用法："))
+        .stderr(predicate::str::contains("如需更多信息，请尝试"));
+}
+
+#[test]
+fn test_zh_missing_subcommand_help_is_localized() {
+    cargo_bin_cmd!("tokenx")
+        .args(["--language", "zh-CN", "pricing"])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("用法："))
+        .stdout(predicate::str::contains("命令:"))
+        .stdout(predicate::str::contains("选项:"))
+        .stdout(predicate::str::contains("显示帮助"))
+        .stdout(predicate::str::contains("Usage:").not())
+        .stdout(predicate::str::contains("Commands:").not())
+        .stdout(predicate::str::contains("Options:").not());
+}
+#[test]
 fn test_invalid_command() {
     let mut cmd = cargo_bin_cmd!("tokenx");
     cmd.arg("invalid-command").assert().failure();
@@ -888,7 +956,7 @@ fn test_debug_flag_is_owned_by_tui() {
 #[test]
 fn test_tui_refresh_modes_are_mutually_exclusive() {
     cargo_bin_cmd!("tokenx")
-        .args(["tui", "--refresh", "30", "--no-refresh"])
+        .args(["--language", "en", "tui", "--refresh", "30", "--no-refresh"])
         .assert()
         .code(2)
         .stderr(predicate::str::contains("cannot be used with"));

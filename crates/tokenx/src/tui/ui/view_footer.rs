@@ -25,7 +25,7 @@ pub(crate) fn render(
                 frame,
                 app,
                 area,
-                Cow::Borrowed(super::loading::FETCHING_SUBSCRIPTION_DATA),
+                rust_i18n::t!("tui.ui.loading.fetching_subscription_data"),
                 rust_i18n::t!("tui.ui.footer.activity.fetching"),
                 app.subscription_fetch_elapsed()
                     .unwrap_or_default()
