@@ -1,4 +1,5 @@
 use super::litellm::ModelPricing;
+use super::lookup::has_any_usable_pricing;
 use super::{emit_warning, PricingDiagnosticSink, PricingDiagnostics};
 use serde::de::{MapAccess, Visitor};
 use serde::Deserialize;
@@ -298,6 +299,10 @@ impl CustomPricing {
 
     pub fn len(&self) -> usize {
         self.models.len()
+    }
+
+    pub(crate) fn has_usable_pricing(&self) -> bool {
+        self.models.values().any(has_any_usable_pricing)
     }
 
     pub fn is_empty(&self) -> bool {

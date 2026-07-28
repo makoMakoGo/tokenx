@@ -99,7 +99,7 @@ fn canonicalize_known_model_alias(model: &str) -> Option<String> {
             return Some(canonical);
         }
     }
-    if model.starts_with("kimi") || model.starts_with("k2") {
+    if model.starts_with("kimi") || model.starts_with("k2") || model.starts_with("k3") {
         if let Some(canonical) = canonicalize_kimi_observed_model(model) {
             return Some(canonical);
         }
@@ -394,6 +394,7 @@ fn canonicalize_kimi_observed_model(model: &str) -> Option<String> {
     }
 
     match canonical_model_segment(model) {
+        "k3" | "k3-256k" | "kimi-k3" | "kimi-k3-256k" => Some("kimi-k3".to_string()),
         "k2p5" | "k2-p5" | "kimi-for-coding/k2p5" | "kimi-for-coding/k2-p5" => {
             Some("kimi-k2.5".to_string())
         }
@@ -639,6 +640,12 @@ mod tests {
 
     #[test]
     fn canonicalizes_parser_shim_aliases_and_global_cleanup() {
+        for raw in ["k3", "k3-256k", "kimi-k3-256k"] {
+            assert_eq!(
+                canonicalize_observed_model_id(raw).as_deref(),
+                Some("kimi-k3")
+            );
+        }
         assert_eq!(
             canonicalize_observed_model_id("k2p5").as_deref(),
             Some("kimi-k2.5")

@@ -162,6 +162,9 @@ impl PricingService {
             ),
         }
     }
+    fn has_usable_pricing(&self) -> bool {
+        self.custom.has_usable_pricing() || self.lookup.has_usable_pricing()
+    }
 
     // @keep: the retain logic is non-trivial (lowercase + prefix match); this doc
     // explains *why* these entries are dropped, not just *what* the code does.
@@ -249,20 +252,13 @@ impl PricingService {
         openrouter_data: Option<HashMap<String, ModelPricing>>,
         models_dev_data: Option<HashMap<String, ModelPricing>>,
     ) -> Option<Self> {
-        if custom.is_empty()
-            && litellm_data.is_none()
-            && openrouter_data.is_none()
-            && models_dev_data.is_none()
-        {
-            return None;
-        }
-
-        Some(Self::new_with_custom_and_models_dev(
+        let service = Self::new_with_custom_and_models_dev(
             custom,
             Self::filter_litellm_data(litellm_data.unwrap_or_default()),
             openrouter_data.unwrap_or_default(),
             models_dev_data.unwrap_or_default(),
-        ))
+        );
+        service.has_usable_pricing().then_some(service)
     }
 
     pub fn load_cached_any_age(custom_path: &Path, cache_dir: &Path) -> Option<Self> {
@@ -503,6 +499,64 @@ impl ResolvedPricingSnapshot {
             ),
             service,
             diagnostics,
+        }
+    }
+    /// Resolve local pricing and fetch public catalogs when no usable local
+    /// pricing exists.
+    ///
+    /// The local snapshot remains the authority whenever it has usable pricing.
+    /// A successful fetch is reflected back into the local cache before the
+    /// snapshot identity is recaptured.
+    pub async fn resolve_from_with_fetch(custom_path: &Path, cache_dir: &Path) -> Self {
+        let local = Self::resolve_from(custom_path, cache_dir);
+        if local.service.is_some() {
+            return local;
+        }
+
+        let mut fetch_diagnostics = PricingDiagnostics::new();
+        match PricingService::fetch_current_with_diagnostics(
+            custom_path,
+            cache_dir,
+            &mut fetch_diagnostics,
+        )
+        .await
+        {
+            Ok(service) if service.has_usable_pricing() => {
+                let refreshed = Self::resolve_from(custom_path, cache_dir);
+                let mut diagnostics = refreshed.diagnostics;
+                diagnostics
+                    .retain(|diagnostic| diagnostic.kind() != PricingDiagnosticKind::Unavailable);
+                diagnostics.extend(fetch_diagnostics);
+                Self {
+                    context: refreshed.context,
+                    service: Some(service),
+                    diagnostics,
+                }
+            }
+            Ok(_) => {
+                let mut diagnostics = local.diagnostics;
+                diagnostics.extend(fetch_diagnostics);
+                diagnostics.push(PricingDiagnostic::unavailable(
+                    "[tokenx] pricing fetch returned no usable catalog",
+                ));
+                Self {
+                    context: local.context,
+                    service: None,
+                    diagnostics,
+                }
+            }
+            Err(error) => {
+                let mut diagnostics = local.diagnostics;
+                diagnostics.extend(fetch_diagnostics);
+                diagnostics.push(PricingDiagnostic::unavailable(format!(
+                    "[tokenx] pricing fetch failed: {error}"
+                )));
+                Self {
+                    context: local.context,
+                    service: None,
+                    diagnostics,
+                }
+            }
         }
     }
 
@@ -781,10 +835,36 @@ mod tests {
             .iter()
             .any(|diagnostic| diagnostic.message().contains("file is too large")));
     }
+    #[test]
+    fn empty_cached_catalog_is_unavailable_without_blocking_resolution() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let custom_path = temp.path().join("custom-pricing.json");
+        let cache_dir = temp.path().join("cache");
+        std::fs::create_dir_all(&cache_dir).unwrap();
+        cache::save_cache(
+            &cache_dir,
+            CACHED_CATALOG_FILES[0],
+            &HashMap::<String, ModelPricing>::new(),
+        )
+        .unwrap();
+
+        let snapshot = ResolvedPricingSnapshot::resolve_from(&custom_path, &cache_dir);
+
+        assert!(snapshot.service().is_none());
+        assert_eq!(
+            PricingStatus::from_diagnostics(snapshot.diagnostics()),
+            PricingStatus::Unavailable
+        );
+        assert!(snapshot
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.kind() == PricingDiagnosticKind::Unavailable));
+    }
 
     #[test]
     fn invalid_catalog_keeps_valid_custom_pricing_as_a_partial_snapshot() {
         let temp = tempfile::TempDir::new().unwrap();
+
         let custom_path = temp.path().join("custom-pricing.json");
         std::fs::write(
             &custom_path,
@@ -1363,6 +1443,31 @@ mod tests {
         assert_eq!(result.pricing_source, "Custom");
         assert_eq!(result.matched_key, "kimi-k2p6-turbo");
         assert_eq!(result.pricing.input_cost_per_token, Some(0.000002));
+    }
+    #[test]
+    fn kimi_k3_aliases_reuse_kimi_k3_pricing() {
+        let mut litellm = HashMap::new();
+        litellm.insert("kimi-k3".into(), model_pricing(0.000001, 0.000002));
+        let service = custom_service(HashMap::new(), litellm, HashMap::new());
+        let usage = TokenBreakdown {
+            input: 1_000_000,
+            output: 500_000,
+            ..TokenBreakdown::default()
+        };
+        let expected = service
+            .calculate_cost_with_provider("kimi-k3", None, &usage)
+            .unwrap();
+
+        for model_id in ["k3", "k3-256k", "kimi-k3-256k"] {
+            let lookup = service.lookup_with_pricing_source(model_id, None).unwrap();
+            assert_eq!(lookup.matched_key, "kimi-k3");
+            assert_eq!(
+                service
+                    .calculate_cost_with_provider(model_id, None, &usage)
+                    .unwrap(),
+                expected
+            );
+        }
     }
 
     #[test]

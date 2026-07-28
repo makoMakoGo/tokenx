@@ -1,4 +1,5 @@
 use super::litellm::ModelPricing;
+use super::lookup::has_any_usable_pricing;
 use super::{cache, emit_warning, PricingDiagnosticSink, PricingDiagnostics};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -204,7 +205,9 @@ async fn fetch_all_models_with_sink(
     diagnostics: &mut PricingDiagnosticSink<'_>,
 ) -> HashMap<String, ModelPricing> {
     if let Some(cached) = load_cached(cache_dir) {
-        return cached;
+        if cached.values().any(has_any_usable_pricing) {
+            return cached;
+        }
     }
 
     let client = Arc::new(
