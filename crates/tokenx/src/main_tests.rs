@@ -779,6 +779,35 @@ fn clap_accepts_explicit_cache_warm_scope() {
 }
 
 #[test]
+fn language_flag_is_global_and_typed() {
+    for argv in [
+        vec!["tokenx", "--language", "zh-CN", "models"],
+        vec!["tokenx", "models", "--language", "zh-CN"],
+    ] {
+        let cli = Cli::try_parse_from(argv).expect("--language must parse anywhere");
+        assert_eq!(cli.language, Some(crate::i18n::Language::ZhCn));
+    }
+
+    let cli = Cli::try_parse_from(["tokenx", "tui", "--language=en"]).expect("equals form parses");
+    assert_eq!(cli.language, Some(crate::i18n::Language::En));
+
+    let cli = Cli::try_parse_from(["tokenx", "models"]).expect("parse ok");
+    assert_eq!(cli.language, None);
+}
+
+#[test]
+fn language_flag_rejects_unknown_values() {
+    // An unsupported language is a clap error, not a silent English fallback.
+    for argv in [
+        vec!["tokenx", "--language", "zh", "models"],
+        vec!["tokenx", "models", "--language", "french"],
+    ] {
+        let error = Cli::try_parse_from(argv).expect_err("invalid language must fail");
+        assert_eq!(error.exit_code(), 2);
+    }
+}
+
+#[test]
 fn client_id_parses_warp() {
     assert_eq!(ClientId::from_str("warp"), Some(ClientId::Warp));
     assert_eq!(ClientId::Warp.as_str(), "warp");

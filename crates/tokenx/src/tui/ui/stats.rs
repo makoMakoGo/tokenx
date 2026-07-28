@@ -6,6 +6,7 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 
 use crate::tui::actions::ActionSet;
 use crate::tui::data::{ContributionDay, ContributionGrade, DailyClientInfo, DailyUsage};
+use crate::tui::date::format_full_date;
 use crate::tui::intent::Intent;
 use crate::tui::model::TuiModel;
 use crate::tui::presentation::EmptySubject;
@@ -26,13 +27,17 @@ const CONTRIBUTION_GRADES: [ContributionGrade; 5] = [
     ContributionGrade::High,
     ContributionGrade::Peak,
 ];
-const LEGEND_LESS_LABEL: &str = "Less ";
-const LEGEND_MORE_LABEL: &str = " More";
-const LEGEND_WIDTH: u16 = LEGEND_LESS_LABEL.len() as u16
-    + LEGEND_MORE_LABEL.len() as u16
-    + CELL_WIDTH * CONTRIBUTION_GRADES.len() as u16
-    + CONTRIBUTION_GRADES.len() as u16
-    - 1;
+/// Display width of the legend row: labels plus one separating space each,
+/// the grade cells, and the gaps between them.
+fn legend_width(less_label: &str, more_label: &str) -> u16 {
+    less_label.len() as u16
+        + 1
+        + more_label.len() as u16
+        + 1
+        + CELL_WIDTH * CONTRIBUTION_GRADES.len() as u16
+        + CONTRIBUTION_GRADES.len() as u16
+        - 1
+}
 const GRAPH_PANEL_H: u16 = 14;
 const GRAPH_MIN_H: u16 = 11;
 const DAY_INSIGHTS_MIN_H: u16 = 5;
@@ -84,7 +89,7 @@ fn graph_block(app: &TuiModel) -> Block<'_> {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(app.theme.chrome.border))
         .title(Span::styled(
-            " Contribution Graph (52 weeks) ",
+            format!(" {} ", rust_i18n::t!("tui.ui.stats.graph_title")),
             Style::default()
                 .fg(app.theme.chrome.heading)
                 .add_modifier(Modifier::BOLD),
@@ -288,13 +293,16 @@ fn render_graph_metrics(
     let metrics_y = last_grid_row.saturating_add(2);
     if metrics_y < content.bottom() {
         let metrics = Line::from(vec![
-            Span::styled("Current ", Style::default().fg(app.theme.text.secondary)),
+            Span::styled(
+                format!("{} ", rust_i18n::t!("tui.ui.stats.metrics_current")),
+                Style::default().fg(app.theme.text.secondary),
+            ),
             Span::styled(
                 format!("{}d", app.usage().current_streak),
                 Style::default().fg(app.theme.metrics.total),
             ),
             Span::styled(
-                "  ·  Longest ",
+                format!("  ·  {} ", rust_i18n::t!("tui.ui.stats.metrics_longest")),
                 Style::default().fg(app.theme.text.secondary),
             ),
             Span::styled(
@@ -302,7 +310,7 @@ fn render_graph_metrics(
                 Style::default().fg(app.theme.metrics.total),
             ),
             Span::styled(
-                "  ·  Active ",
+                format!("  ·  {} ", rust_i18n::t!("tui.ui.stats.metrics_active")),
                 Style::default().fg(app.theme.text.secondary),
             ),
             Span::styled(
@@ -318,8 +326,10 @@ fn render_graph_metrics(
 
     let legend_y = metrics_y.saturating_add(1);
     if legend_y < content.bottom() {
+        let less_label = rust_i18n::t!("tui.ui.stats.legend_less");
+        let more_label = rust_i18n::t!("tui.ui.stats.legend_more");
         let mut legend_spans = vec![Span::styled(
-            LEGEND_LESS_LABEL,
+            format!("{less_label} "),
             Style::default().fg(app.theme.text.secondary),
         )];
         for (index, grade) in CONTRIBUTION_GRADES.into_iter().enumerate() {
@@ -332,7 +342,7 @@ fn render_graph_metrics(
             ));
         }
         legend_spans.push(Span::styled(
-            LEGEND_MORE_LABEL,
+            format!(" {more_label}"),
             Style::default().fg(app.theme.text.secondary),
         ));
         let legend = Line::from(legend_spans);
@@ -341,9 +351,11 @@ fn render_graph_metrics(
             Rect::new(content.x, legend_y, content.width, 1),
         );
 
-        let hint = "click a day to inspect details";
+        let hint = rust_i18n::t!("tui.ui.stats.graph_hint");
         let hint_width = hint.len() as u16;
-        let legend_end = content.x.saturating_add(LEGEND_WIDTH);
+        let legend_end = content
+            .x
+            .saturating_add(legend_width(&less_label, &more_label));
         let hint_x = content.right().saturating_sub(hint_width);
         if hint_x >= legend_end {
             frame.render_widget(
@@ -479,7 +491,7 @@ fn render_day_insights(frame: &mut Frame, app: &TuiModel, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(app.theme.chrome.border))
         .title(Span::styled(
-            " Day Insights ",
+            format!(" {} ", rust_i18n::t!("tui.ui.stats.day_insights_title")),
             Style::default()
                 .fg(app.theme.chrome.heading)
                 .add_modifier(Modifier::BOLD),
@@ -493,11 +505,9 @@ fn render_day_insights(frame: &mut Frame, app: &TuiModel, area: Rect) {
 
     let Some(day) = selected_graph_day(app) else {
         frame.render_widget(
-            Paragraph::new(
-                "Select a day in the contribution graph to inspect its client and model usage.",
-            )
-            .style(Style::default().fg(app.theme.text.secondary))
-            .alignment(Alignment::Center),
+            Paragraph::new(rust_i18n::t!("tui.ui.stats.select_day_prompt").into_owned())
+                .style(Style::default().fg(app.theme.text.secondary))
+                .alignment(Alignment::Center),
             inner,
         );
         return;
@@ -572,7 +582,7 @@ fn render_day_stats_lines(
 ) {
     let mut rows = vec![StatRow::Line(Line::from(vec![
         Span::styled(
-            day.date.format("%a, %b %d, %Y").to_string(),
+            format_full_date(day.date),
             Style::default()
                 .fg(app.theme.text.primary)
                 .add_modifier(Modifier::BOLD),
@@ -602,7 +612,10 @@ fn render_day_stats_lines(
         let model_color = app.model_color(&model.canonical_id);
         rows.push(StatRow::KeyVal(
             Line::from(vec![
-                Span::styled("Top model: ", Style::default().fg(app.theme.text.secondary)),
+                Span::styled(
+                    rust_i18n::t!("tui.ui.stats.top_model"),
+                    Style::default().fg(app.theme.text.secondary),
+                ),
                 Span::styled(
                     truncate_model_display_name_to(&model.canonical_id, name_budget),
                     Style::default().fg(model_color),
@@ -612,9 +625,9 @@ fn render_day_stats_lines(
         ));
     } else {
         let message = if day.tokens > 0 {
-            "No detailed usage breakdown is available for this day."
+            rust_i18n::t!("tui.ui.stats.no_detail")
         } else {
-            "No activity"
+            rust_i18n::t!("tui.ui.stats.no_activity")
         };
         rows.push(StatRow::Line(Line::from(Span::styled(
             message,
@@ -635,7 +648,7 @@ fn render_day_stats_lines(
             rows.push(StatRow::KeyVal(
                 Line::from(vec![
                     Span::styled(
-                        "Top client: ",
+                        rust_i18n::t!("tui.ui.stats.top_client"),
                         Style::default().fg(app.theme.text.secondary),
                     ),
                     Span::styled(
@@ -654,9 +667,9 @@ fn render_day_stats_lines(
         .filter(|value| **value > 0.0)
         .count();
     let hours_label = if app.is_narrow() {
-        format!("{active_count}h active")
+        rust_i18n::t!("tui.ui.stats.hours_active_narrow", count = active_count).into_owned()
     } else {
-        format!("Hours: {active_count} active")
+        rust_i18n::t!("tui.ui.stats.hours_active_wide", count = active_count).into_owned()
     };
     rows.push(StatRow::Line(Line::from(Span::styled(
         hours_label,
@@ -759,7 +772,7 @@ fn radar_axes(ranked_models: &[RankedModel]) -> [RadarAxis; 4] {
         label: if others == 0 {
             String::new()
         } else {
-            "Others".to_string()
+            rust_i18n::t!("tui.ui.stats.radar_others").into_owned()
         },
         share: others as f64 / denominator,
     });

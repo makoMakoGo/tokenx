@@ -1,5 +1,6 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation};
+use std::borrow::Cow;
 
 use super::empty_state;
 use super::usage_profile;
@@ -24,7 +25,7 @@ pub fn render(
         .borders(Borders::ALL)
         .border_style(Style::default().fg(app.theme.chrome.border))
         .title(Span::styled(
-            " Hourly Profile ",
+            rust_i18n::t!("tui.ui.hourly.profile_title"),
             Style::default()
                 .fg(app.theme.chrome.heading)
                 .add_modifier(Modifier::BOLD),
@@ -54,9 +55,12 @@ pub fn render(
                 0,
             );
             frame.render_widget(
-                Paragraph::new(format!("Hourly profile projection failed: {error}"))
-                    .style(Style::default().fg(app.theme.status.danger))
-                    .wrap(ratatui::widgets::Wrap { trim: true }),
+                Paragraph::new(
+                    rust_i18n::t!("tui.ui.hourly.projection_failed", error = error.to_string())
+                        .into_owned(),
+                )
+                .style(Style::default().fg(app.theme.status.danger))
+                .wrap(ratatui::widgets::Wrap { trim: true }),
                 content,
             );
             return;
@@ -98,6 +102,18 @@ fn period_contains_hour(label: &str, hour: u32) -> bool {
     }
 }
 
+/// Resolves a no-interpolation translation to `&'static str` for the shared
+/// `usage_profile` helpers, whose label parameters still take `&'static str`.
+/// Without interpolation arguments `t!` always resolves to a value borrowed
+/// from the static backend (or the literal key fallback); the owned branch
+/// only exists to keep the invariant if that ever changes.
+fn static_label(key: &'static str) -> &'static str {
+    match rust_i18n::t!(key) {
+        Cow::Borrowed(label) => label,
+        Cow::Owned(label) => Box::leak(label.into_boxed_str()),
+    }
+}
+
 pub(crate) fn build_hourly_profile_lines(
     app: &TuiModel,
     area_width: u16,
@@ -111,7 +127,7 @@ pub(crate) fn build_hourly_profile_lines(
         app,
         hourly.iter().map(|entry| entry.datetime.date()),
         hourly.len(),
-        "active hours",
+        static_label("tui.ui.hourly.active_hours"),
     )
     .into_iter()
     .collect::<Vec<_>>();
@@ -143,7 +159,7 @@ pub(crate) fn build_hourly_profile_lines(
     if let Some((hour, tokens, cost)) = peak_hour {
         lines.push(usage_profile::peak_line(
             app,
-            "Peak hour ",
+            static_label("tui.ui.hourly.peak_hour"),
             format!("{hour:02}:00-{hour:02}:59"),
             tokens,
             cost,

@@ -18,7 +18,7 @@ struct CacheEnvelope {
 fn current_unix_timestamp() -> Result<u64> {
     Ok(std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .context("system clock is before the Unix epoch")?
+        .context(rust_i18n::t!("subscription.error.cache_clock_before_epoch"))?
         .as_secs())
 }
 
@@ -33,9 +33,10 @@ fn save_at(path: &std::path::Path, data: &[SubscriptionOutput], timestamp: u64) 
         timestamp,
         data: data.to_vec(),
     };
-    let bytes = serde_json::to_vec(&envelope).context("failed to serialize subscription cache")?;
+    let bytes = serde_json::to_vec(&envelope)
+        .context(rust_i18n::t!("subscription.error.cache_serialize"))?;
     tokenx_engine::fs_atomic::write_atomic(path, &bytes)
-        .with_context(|| format!("failed to persist subscription cache `{}`", path.display()))
+        .with_context(|| rust_i18n::t!("subscription.error.cache_persist", path = path.display()))
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -48,33 +49,35 @@ fn load_at(path: &std::path::Path, now: u64) -> Result<Option<Vec<SubscriptionOu
         Ok(content) => content,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => {
-            return Err(error)
-                .with_context(|| format!("failed to read subscription cache `{}`", path.display()))
+            return Err(error).with_context(|| {
+                rust_i18n::t!("subscription.error.cache_read", path = path.display())
+            })
         }
     };
-    let envelope: CacheEnvelope = serde_json::from_slice(&content)
-        .with_context(|| format!("malformed subscription cache `{}`", path.display()))?;
+    let envelope: CacheEnvelope = serde_json::from_slice(&content).with_context(|| {
+        rust_i18n::t!("subscription.error.cache_malformed", path = path.display())
+    })?;
     if envelope.schema != CACHE_SCHEMA {
-        anyhow::bail!(
-            "subscription cache `{}` has unsupported schema `{}`",
-            path.display(),
-            envelope.schema
-        );
+        anyhow::bail!(rust_i18n::t!(
+            "subscription.error.cache_unsupported_schema",
+            path = path.display(),
+            schema = envelope.schema
+        ));
     }
     if envelope.version != CACHE_VERSION {
-        anyhow::bail!(
-            "subscription cache `{}` has unsupported version {}",
-            path.display(),
-            envelope.version
-        );
+        anyhow::bail!(rust_i18n::t!(
+            "subscription.error.cache_unsupported_version",
+            path = path.display(),
+            version = envelope.version
+        ));
     }
     if envelope.timestamp > now {
-        anyhow::bail!(
-            "subscription cache `{}` has a future timestamp {} (current time {})",
-            path.display(),
-            envelope.timestamp,
-            now
-        );
+        anyhow::bail!(rust_i18n::t!(
+            "subscription.error.cache_future_timestamp",
+            path = path.display(),
+            timestamp = envelope.timestamp,
+            now = now
+        ));
     }
     if now.saturating_sub(envelope.timestamp) > CACHE_MAX_AGE_SECS {
         return Ok(None);

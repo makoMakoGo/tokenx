@@ -622,7 +622,7 @@ fn test_cache_prune_reports_empty_cache_stats() {
     let config_dir = TempDir::new().unwrap();
     let mut cmd = cargo_bin_cmd!("tokenx");
     cmd.env("TOKENX_CONFIG_DIR", config_dir.path())
-        .args(["cache", "prune"])
+        .args(["--language", "en", "cache", "prune"])
         .assert()
         .success()
         .stdout(predicate::str::contains(
@@ -766,6 +766,8 @@ fn test_custom_date_range_must_be_ordered() {
             "--until",
             "2026-07-14",
             "--no-spinner",
+            "--language",
+            "en",
         ])
         .assert()
         .code(2)
@@ -821,7 +823,7 @@ fn test_tui_accepts_every_canonical_theme_before_terminal_validation() {
 
     for theme in THEME_NAMES {
         cargo_bin_cmd!("tokenx")
-            .args(["tui", "--theme", theme])
+            .args(["tui", "--theme", theme, "--language", "en"])
             .assert()
             .code(2)
             .stderr(predicate::str::contains(
@@ -907,7 +909,7 @@ fn test_opencode_invalid_sqlite_payload_is_rejected_without_losing_good_rows() {
     drop(conn);
 
     cmd_with_home(tmp.path())
-        .args(["models", "--json", "--client", "opencode", "--no-spinner"])
+        .args(["models", "--json", "--client", "opencode", "--no-spinner", "--language", "en"])
         .assert()
         .success()
         .stdout(predicate::str::contains("\"degradedInputs\": 1"))
@@ -1007,11 +1009,52 @@ fn test_codex_models_home_override_uses_the_explicit_home() {
 }
 
 #[test]
+fn test_language_flag_selects_chinese_output() {
+    let tmp = TempDir::new().unwrap();
+
+    cargo_bin_cmd!("tokenx")
+        .args([
+            "tui",
+            "--home",
+            tmp.path().to_str().unwrap(),
+            "--language",
+            "zh-CN",
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("TUI 需要交互式终端"));
+}
+
+#[test]
+fn test_settings_language_selects_chinese_without_a_flag() {
+    let tmp = TempDir::new().unwrap();
+    let config_dir = TempDir::new().unwrap();
+    fs::write(
+        config_dir.path().join("settings.json"),
+        r#"{"language":"zh-CN"}"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("tokenx")
+        .env("TOKENX_CONFIG_DIR", config_dir.path())
+        .args(["tui", "--home", tmp.path().to_str().unwrap()])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("TUI 需要交互式终端"));
+}
+
+#[test]
 fn test_tui_accepts_home_but_requires_an_interactive_terminal() {
     let tmp = TempDir::new().unwrap();
 
     cargo_bin_cmd!("tokenx")
-        .args(["tui", "--home", tmp.path().to_str().unwrap()])
+        .args([
+            "tui",
+            "--home",
+            tmp.path().to_str().unwrap(),
+            "--language",
+            "en",
+        ])
         .assert()
         .code(2)
         .stderr(predicate::str::contains(
@@ -1254,7 +1297,14 @@ fn test_models_json_offline_without_pricing_cache_still_succeeds() {
 fn test_models_table_uses_tui_metric_columns() {
     let tmp = create_temp_fixture_dir();
     cmd_with_home(tmp.path())
-        .args(["models", "--client", "opencode", "--no-spinner"])
+        .args([
+            "models",
+            "--client",
+            "opencode",
+            "--no-spinner",
+            "--language",
+            "en",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cache×"))
@@ -1354,7 +1404,15 @@ fn test_models_reports_project_reasoning_into_output() {
     .unwrap();
 
     let json_output = cmd_with_home(base)
-        .args(["models", "--json", "--client", "omp", "--no-spinner"])
+        .args([
+            "models",
+            "--json",
+            "--client",
+            "omp",
+            "--no-spinner",
+            "--language",
+            "en",
+        ])
         .output()
         .unwrap();
     assert!(
@@ -1370,7 +1428,14 @@ fn test_models_reports_project_reasoning_into_output() {
     assert_eq!(json["data"]["totals"]["tokens"], 165);
 
     let table_output = cmd_with_home(base)
-        .args(["models", "--client", "omp", "--no-spinner"])
+        .args([
+            "models",
+            "--client",
+            "omp",
+            "--no-spinner",
+            "--language",
+            "en",
+        ])
         .output()
         .unwrap();
     assert!(
@@ -1743,6 +1808,8 @@ fn test_pricing_command_success() {
         "lookup",
         "claude-sonnet-4-20250514",
         "--no-spinner",
+        "--language",
+        "en",
     ])
     .assert()
     .success()
@@ -1846,6 +1913,8 @@ fn test_models_command_reports_malformed_settings() {
             "--home",
             tmp.path().to_str().unwrap(),
             "--no-spinner",
+            "--language",
+            "en",
         ])
         .assert()
         .code(2)
@@ -1866,6 +1935,8 @@ fn invalid_settings_range_is_invalid_execution_environment() {
             "--home",
             tmp.path().to_str().unwrap(),
             "--no-spinner",
+            "--language",
+            "en",
         ])
         .assert()
         .code(2)
@@ -1886,6 +1957,8 @@ fn non_utf8_settings_is_invalid_execution_environment() {
             "--home",
             tmp.path().to_str().unwrap(),
             "--no-spinner",
+            "--language",
+            "en",
         ])
         .assert()
         .code(2)
@@ -1905,6 +1978,8 @@ fn unreadable_settings_path_remains_an_operational_error() {
             "--home",
             tmp.path().to_str().unwrap(),
             "--no-spinner",
+            "--language",
+            "en",
         ])
         .assert()
         .code(1)
@@ -1918,7 +1993,15 @@ fn test_models_json_routes_claude_desktop_diagnostic_to_stderr() {
     fs::create_dir_all(tmp.path().join("Library/Application Support/Claude")).unwrap();
 
     let output = cmd_with_home(tmp.path())
-        .args(["models", "--client", "claude", "--json", "--no-spinner"])
+        .args([
+            "models",
+            "--client",
+            "claude",
+            "--json",
+            "--no-spinner",
+            "--language",
+            "en",
+        ])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -1935,7 +2018,14 @@ fn test_models_json_routes_claude_desktop_diagnostic_to_stderr() {
 fn test_models_table_output() {
     let tmp = create_temp_fixture_dir();
     cmd_with_home(tmp.path())
-        .args(["models", "--client", "opencode", "--no-spinner"])
+        .args([
+            "models",
+            "--client",
+            "opencode",
+            "--no-spinner",
+            "--language",
+            "en",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Token Usage by Model"));
@@ -1963,6 +2053,8 @@ fn test_models_benchmark_flag() {
             "--client",
             "opencode",
             "--no-spinner",
+            "--language",
+            "en",
             "--benchmark",
         ])
         .assert()
@@ -2012,7 +2104,7 @@ fn cache_warm_writes_to_canonical_path() {
 
     cmd_with_home(tmp.path())
         .env("TOKENX_CONFIG_DIR", &config_dir)
-        .args(["cache", "warm", "--client", "opencode"])
+        .args(["--language", "en", "cache", "warm", "--client", "opencode"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Generation cache warmed"));

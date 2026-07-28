@@ -141,7 +141,7 @@ fn render_cold_failed(frame: &mut Frame, app: &TuiModel, area: Rect) {
 
     let lines = vec![
         Line::from(Span::styled(
-            "Could not load local data",
+            rust_i18n::t!("tui.ui.load_failed_title"),
             Style::default()
                 .fg(app.theme.status.danger)
                 .add_modifier(Modifier::BOLD),
