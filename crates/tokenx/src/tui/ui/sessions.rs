@@ -12,8 +12,8 @@ use super::widgets::{
     format_cost, format_tokens, get_client_display_name, truncate_display_width,
     viewport_scrollbar_state,
 };
+use crate::date_display::format_timestamp as format_local_timestamp;
 use crate::tui::actions::ActionSet;
-use crate::tui::date::format_timestamp as format_local_timestamp;
 use crate::tui::local_usage::LocalUsageStatus;
 use crate::tui::model::TuiModel;
 use crate::tui::page_state::PageStates;

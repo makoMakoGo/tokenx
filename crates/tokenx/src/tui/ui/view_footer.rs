@@ -163,13 +163,13 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
+    use crate::terminal_text::width_u16;
     use crate::tui::data::{DailyUsage, UsageProjection, UsageTokenBreakdown};
     use crate::tui::intent::Intent;
     use crate::tui::model::TuiConfig;
     use chrono::NaiveDate;
     use ratatui::{backend::TestBackend, Terminal};
     use tokenx_engine::{FrozenUsageIndex, InputFootprint, SessionUsage};
-    use unicode_width::UnicodeWidthStr;
 
     fn make_app(width: u16) -> TuiModel {
         let config = TuiConfig {
@@ -267,7 +267,7 @@ mod tests {
         assert_eq!(clicks.len(), expected.len());
         for ((field, rect), (expected_field, label)) in clicks.iter().zip(expected) {
             assert_eq!(field, expected_field);
-            assert_eq!(rect.width, label.width() as u16);
+            assert_eq!(rect.width, width_u16(label));
             let rendered_label = (rect.x..rect.right())
                 .map(|x| buffer[(x, rect.y)].symbol())
                 .collect::<Vec<_>>()

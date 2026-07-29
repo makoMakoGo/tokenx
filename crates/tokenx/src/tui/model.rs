@@ -24,7 +24,6 @@ use super::data::{
     AgentEntry, DailyUsage, HourlyUsage, OverviewSummary, PeriodKind, PeriodUsage, UsageModelEntry,
     UsageProjection,
 };
-use super::date::{format_period_label, format_year_month_day};
 use super::effect::{EffectOutcome, TuiEffect};
 use super::generation_controller::{RefreshControl, RefreshRequest, RefreshStatus};
 use super::intent::Intent;
@@ -38,6 +37,7 @@ use super::model_family::ModelFamily;
 use super::session_data::SessionSnapshot;
 use super::themes::{Theme, ThemeName};
 use super::ui::dialog::{ClientPickerDialog, DialogResult, DialogStack, UiCommand};
+use crate::date_display::{format_period_label, format_year_month_day};
 use crate::product_paths::ProductPaths;
 use crate::settings::Settings;
 use crate::subscription::{
@@ -97,55 +97,55 @@ impl Tab {
         ]
     }
 
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> Cow<'static, str> {
         self.labels().0
     }
 
-    pub fn short_name(&self) -> &'static str {
+    pub fn short_name(&self) -> Cow<'static, str> {
         self.labels().1
     }
 
-    fn labels(self) -> (&'static str, &'static str) {
+    fn labels(self) -> (Cow<'static, str>, Cow<'static, str>) {
         match self {
             Tab::Overview => (
-                static_text(rust_i18n::t!("tui.model.tab.overview")),
-                static_text(rust_i18n::t!("tui.model.tab.overview_short")),
+                rust_i18n::t!("tui.model.tab.overview"),
+                rust_i18n::t!("tui.model.tab.overview_short"),
             ),
             Tab::Subscription => (
-                static_text(rust_i18n::t!("tui.model.tab.subscription")),
-                static_text(rust_i18n::t!("tui.model.tab.subscription_short")),
+                rust_i18n::t!("tui.model.tab.subscription"),
+                rust_i18n::t!("tui.model.tab.subscription_short"),
             ),
             Tab::Models => (
-                static_text(rust_i18n::t!("tui.model.tab.models")),
-                static_text(rust_i18n::t!("tui.model.tab.models_short")),
+                rust_i18n::t!("tui.model.tab.models"),
+                rust_i18n::t!("tui.model.tab.models_short"),
             ),
             Tab::Monthly => (
-                static_text(rust_i18n::t!("tui.model.tab.monthly")),
-                static_text(rust_i18n::t!("tui.model.tab.monthly_short")),
+                rust_i18n::t!("tui.model.tab.monthly"),
+                rust_i18n::t!("tui.model.tab.monthly_short"),
             ),
             Tab::Weekly => (
-                static_text(rust_i18n::t!("tui.model.tab.weekly")),
-                static_text(rust_i18n::t!("tui.model.tab.weekly_short")),
+                rust_i18n::t!("tui.model.tab.weekly"),
+                rust_i18n::t!("tui.model.tab.weekly_short"),
             ),
             Tab::Daily => (
-                static_text(rust_i18n::t!("tui.model.tab.daily")),
-                static_text(rust_i18n::t!("tui.model.tab.daily_short")),
+                rust_i18n::t!("tui.model.tab.daily"),
+                rust_i18n::t!("tui.model.tab.daily_short"),
             ),
             Tab::Hourly => (
-                static_text(rust_i18n::t!("tui.model.tab.hourly")),
-                static_text(rust_i18n::t!("tui.model.tab.hourly_short")),
+                rust_i18n::t!("tui.model.tab.hourly"),
+                rust_i18n::t!("tui.model.tab.hourly_short"),
             ),
             Tab::Stats => (
-                static_text(rust_i18n::t!("tui.model.tab.stats")),
-                static_text(rust_i18n::t!("tui.model.tab.stats_short")),
+                rust_i18n::t!("tui.model.tab.stats"),
+                rust_i18n::t!("tui.model.tab.stats_short"),
             ),
             Tab::Agents => (
-                static_text(rust_i18n::t!("tui.model.tab.agents")),
-                static_text(rust_i18n::t!("tui.model.tab.agents_short")),
+                rust_i18n::t!("tui.model.tab.agents"),
+                rust_i18n::t!("tui.model.tab.agents_short"),
             ),
             Tab::Sessions => (
-                static_text(rust_i18n::t!("tui.model.tab.sessions")),
-                static_text(rust_i18n::t!("tui.model.tab.sessions_short")),
+                rust_i18n::t!("tui.model.tab.sessions"),
+                rust_i18n::t!("tui.model.tab.sessions_short"),
             ),
         }
     }
@@ -225,15 +225,11 @@ pub(crate) enum StatusTone {
     Danger,
 }
 
-fn pricing_warning(status: PricingStatus) -> Option<&'static str> {
+fn pricing_warning(status: PricingStatus) -> Option<Cow<'static, str>> {
     match status {
         PricingStatus::Available => None,
-        PricingStatus::CachedFallback => Some(static_text(rust_i18n::t!(
-            "tui.model.pricing.cached_fallback"
-        ))),
-        PricingStatus::Unavailable => {
-            Some(static_text(rust_i18n::t!("tui.model.pricing.unavailable")))
-        }
+        PricingStatus::CachedFallback => Some(rust_i18n::t!("tui.model.pricing.cached_fallback")),
+        PricingStatus::Unavailable => Some(rust_i18n::t!("tui.model.pricing.unavailable")),
     }
 }
 
@@ -347,16 +343,6 @@ fn client_ids_text(clients: &[ClientId]) -> String {
         .map(|client| client.as_str())
         .collect::<Vec<_>>()
         .join(", ")
-}
-
-/// Parameter-free `t!` lookups always borrow from the static translation
-/// backend (or the key literal itself), so the `Cow` is always `Borrowed`;
-/// the leak arm only exists to keep the signature total.
-fn static_text(text: Cow<'static, str>) -> &'static str {
-    match text {
-        Cow::Borrowed(text) => text,
-        Cow::Owned(text) => Box::leak(text.into_boxed_str()),
-    }
 }
 
 fn sort_detail_order(
@@ -1295,7 +1281,7 @@ impl TuiModel {
         self.generation_cache_warning.as_deref()
     }
 
-    pub(crate) fn pricing_warning(&self) -> Option<&'static str> {
+    pub(crate) fn pricing_warning(&self) -> Option<Cow<'static, str>> {
         pricing_warning(self.pricing_status)
     }
 
@@ -5783,7 +5769,7 @@ mod tests {
             errors: vec![crate::subscription::SubscriptionError {
                 provider_id: Some(ProviderId::Claude),
                 provider: "Claude".to_string(),
-                message: "credential expired".to_string(),
+                issue: crate::subscription::SubscriptionIssue::unexpected("credential expired"),
             }],
         });
 
@@ -5808,11 +5794,11 @@ mod tests {
             errors: vec![crate::subscription::SubscriptionError {
                 provider_id: Some(ProviderId::Claude),
                 provider: "Claude".to_string(),
-                message: "credential rejected".to_string(),
+                issue: crate::subscription::SubscriptionIssue::unexpected("credential rejected"),
             }],
         });
         app.apply_effect_outcome(EffectOutcome::SubscriptionCachePersisted {
-            result: Err("cache directory is read-only".to_string()),
+            result: Err(anyhow::anyhow!("cache directory is read-only")),
         });
 
         assert_eq!(app.subscription_outputs().len(), 2);
@@ -6140,7 +6126,7 @@ mod tests {
             PricingDiagnostic::cached_fallback("network error"),
         ]);
         assert_eq!(
-            app.pricing_warning(),
+            app.pricing_warning().as_deref(),
             Some("Pricing refresh failed; using cached rates")
         );
 
@@ -6149,7 +6135,7 @@ mod tests {
             PricingDiagnostic::unavailable("network error"),
         ]);
         assert_eq!(
-            app.pricing_warning(),
+            app.pricing_warning().as_deref(),
             Some("Pricing unavailable; costs may be missing")
         );
 

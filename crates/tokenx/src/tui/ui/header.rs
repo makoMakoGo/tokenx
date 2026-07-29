@@ -2,8 +2,8 @@ use std::borrow::Cow;
 
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Tabs};
-use unicode_width::UnicodeWidthStr;
 
+use crate::terminal_text::{width, width_u16};
 use crate::tui::intent::Intent;
 use crate::tui::model::{Tab, TuiModel};
 use crate::tui::render_artifacts::RenderArtifacts;
@@ -96,8 +96,8 @@ fn tab_divider(app: &TuiModel) -> Span<'static> {
 
 fn tab_label(_app: &TuiModel, tab: Tab, mode: TabLabelMode) -> Cow<'static, str> {
     match mode {
-        TabLabelMode::Full => Cow::Borrowed(tab.as_str()),
-        TabLabelMode::Short => Cow::Borrowed(tab.short_name()),
+        TabLabelMode::Full => tab.as_str(),
+        TabLabelMode::Short => tab.short_name(),
     }
 }
 
@@ -106,12 +106,12 @@ fn tab_row_width(app: &TuiModel, tabs: &[Tab], mode: TabLabelMode) -> u16 {
         return 0;
     }
 
-    let padding_width = TAB_PADDING_LEFT.width() + TAB_PADDING_RIGHT.width();
+    let padding_width = width(TAB_PADDING_LEFT) + width(TAB_PADDING_RIGHT);
     let labels_width: usize = tabs
         .iter()
-        .map(|tab| tab_label(app, *tab, mode).width() + padding_width)
+        .map(|tab| width(tab_label(app, *tab, mode).as_ref()) + padding_width)
         .sum();
-    let dividers_width = TAB_DIVIDER.width() * tabs.len().saturating_sub(1);
+    let dividers_width = width(TAB_DIVIDER) * tabs.len().saturating_sub(1);
     labels_width
         .saturating_add(dividers_width)
         .min(u16::MAX as usize) as u16
@@ -159,9 +159,9 @@ fn tab_hit_targets(app: &TuiModel, tabs_area: Rect) -> Vec<(Rect, Tab)> {
     let mut x = tab_row.x;
     let right = tab_row.right();
 
-    let left_padding_width = TAB_PADDING_LEFT.width() as u16;
-    let right_padding_width = TAB_PADDING_RIGHT.width() as u16;
-    let divider_width = TAB_DIVIDER.width() as u16;
+    let left_padding_width = width_u16(TAB_PADDING_LEFT);
+    let right_padding_width = width_u16(TAB_PADDING_RIGHT);
+    let divider_width = width_u16(TAB_DIVIDER);
 
     for (index, tab) in visible_tabs.iter().enumerate() {
         let tab_start = x;
@@ -177,7 +177,7 @@ fn tab_hit_targets(app: &TuiModel, tabs_area: Rect) -> Vec<(Rect, Tab)> {
         }
 
         let name = tab_label(app, *tab, label_mode);
-        let width = (name.width() as u16).min(remaining_width);
+        let width = width_u16(name.as_ref()).min(remaining_width);
         if width == 0 {
             break;
         }

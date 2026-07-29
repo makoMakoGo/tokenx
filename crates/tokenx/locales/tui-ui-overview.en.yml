@@ -1,6 +1,5 @@
 tui:
   ui:
-    load_failed_title: "Could not load local data"
     overview:
       chart_title: " Tokens per Day "
       chart_title_narrow: " Tokens "

@@ -21,11 +21,11 @@ use super::widgets::{
     total_tokens_cell, truncate_display_width, truncate_model_display_name_to,
     viewport_scrollbar_state, workspace_label_or_unknown, MODEL_DISPLAY_MAX_WIDTH,
 };
-use crate::tui::actions::ActionSet;
-use crate::tui::data::DailyUsage;
-use crate::tui::date::{
+use crate::date_display::{
     format_day_weekday, format_month_separator as localized_month_separator, format_year_month_day,
 };
+use crate::tui::actions::ActionSet;
+use crate::tui::data::DailyUsage;
 use crate::tui::model::{SortDirection, SortField, TuiModel};
 use crate::tui::presentation::EmptySubject;
 use crate::tui::render_artifacts::RenderArtifacts;

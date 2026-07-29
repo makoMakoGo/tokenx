@@ -1,6 +1,5 @@
 tui:
   ui:
-    load_failed_title: "无法加载本地数据"
     overview:
       chart_title: " 每日 Token 用量 "
       chart_title_narrow: " Token "

@@ -79,3 +79,7 @@ tui:
         cached_no_providers: "正在显示缓存的订阅数据；未启用远程提供商"
         no_providers: "未启用远程订阅提供商；请配置 subscription.providers"
         press_u: "按 u 刷新订阅数据"
+    loading:
+      scanning_local_data: "正在扫描本地数据"
+      fetching_subscription_data: "正在获取订阅数据"
+      load_failed_title: "无法加载本地数据"

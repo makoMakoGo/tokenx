@@ -3,9 +3,9 @@ use std::collections::BTreeSet;
 
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Padding, Paragraph};
-use unicode_width::UnicodeWidthStr;
 
 use super::widgets::{format_cost, format_tokens, truncate_display_width};
+use crate::terminal_text::{width as text_width, width_u16};
 use crate::tui::actions::{Action, ActionSet};
 use crate::tui::data::PeriodKind;
 use crate::tui::intent::Intent;
@@ -119,11 +119,11 @@ impl HelpLine {
 
     fn progressive_line(&self, width: usize) -> Option<Line<'static>> {
         let separator = "·";
-        let separator_width = separator.width() * self.items.len().saturating_sub(1);
+        let separator_width = text_width(separator) * self.items.len().saturating_sub(1);
         let compact_width = self
             .items
             .iter()
-            .map(|item| item.compact.width())
+            .map(|item| text_width(&item.compact))
             .sum::<usize>()
             + separator_width;
         let mut remaining = width.checked_sub(compact_width)?;
@@ -132,10 +132,8 @@ impl HelpLine {
         // Preserve display order while letting smaller later expansions use
         // space that an earlier full label cannot consume.
         for item in &self.items {
-            let expansion_width = item
-                .full
-                .width()
-                .checked_sub(item.compact.width())
+            let expansion_width = text_width(&item.full)
+                .checked_sub(text_width(&item.compact))
                 .expect("full help label must not be narrower than compact label");
             let label = if expansion_width <= remaining {
                 remaining -= expansion_width;
@@ -160,19 +158,19 @@ impl HelpLine {
         let Some(last) = self.items.last() else {
             return Line::default();
         };
-        if self.items.len() == 1 || width < "…·".width() + last.compact.width() {
+        if self.items.len() == 1 || width < text_width("…·") + text_width(&last.compact) {
             return Line::from(Span::styled(
                 truncate_display_width(&last.compact, width),
                 last.style,
             ));
         }
 
-        let suffix_width = "·…·".width() + last.compact.width();
-        let separator_width = "·".width();
+        let suffix_width = text_width("·…·") + text_width(&last.compact);
+        let separator_width = text_width("·");
         let mut prefix_width = 0;
         let mut kept = Vec::new();
         for item in &self.items[..self.items.len() - 1] {
-            let item_width = item.compact.width();
+            let item_width = text_width(&item.compact);
             let next_width =
                 prefix_width + separator_width * usize::from(!kept.is_empty()) + item_width;
             if next_width + suffix_width > width {
@@ -472,7 +470,7 @@ fn timed_activity_line(
     let decorated = format!("{WAVE}  {plain}  {WAVE}");
     let available = width as usize;
 
-    if available >= MIN_WAVE_WIDTH && UnicodeWidthStr::width(decorated.as_str()) <= available {
+    if available >= MIN_WAVE_WIDTH && text_width(decorated.as_str()) <= available {
         return Line::from(vec![
             Span::styled(
                 WAVE.to_string(),
@@ -495,7 +493,7 @@ fn timed_activity_line(
         ]);
     }
 
-    if UnicodeWidthStr::width(plain.as_str()) <= available {
+    if text_width(plain.as_str()) <= available {
         return Line::from(vec![
             Span::styled(message, Style::default().fg(app.theme.text.secondary)),
             Span::styled(" ·", Style::default().fg(app.theme.text.secondary)),
@@ -522,7 +520,10 @@ fn cold_failed_line(app: &TuiModel, width: u16) -> Line<'static> {
     let separator = " · ";
     let available = width as usize;
 
-    let full_width = scan_failed.width() + separator.width() * 2 + retry.width() + quit.width();
+    let full_width = text_width(scan_failed.as_ref())
+        + text_width(separator) * 2
+        + text_width(retry.as_ref())
+        + text_width(quit.as_ref());
     if full_width <= available {
         return Line::from(vec![
             Span::styled(
@@ -538,7 +539,8 @@ fn cold_failed_line(app: &TuiModel, width: u16) -> Line<'static> {
         ]);
     }
 
-    let actions_width = retry.width() + separator.width() + quit.width();
+    let actions_width =
+        text_width(retry.as_ref()) + text_width(separator) + text_width(quit.as_ref());
     if actions_width <= available {
         return Line::from(vec![
             Span::styled(retry, Style::default().fg(app.theme.chrome.focus)),
@@ -548,7 +550,7 @@ fn cold_failed_line(app: &TuiModel, width: u16) -> Line<'static> {
     }
 
     let compact_label = rust_i18n::t!("tui.ui.footer.cold_failed.compact");
-    let compact = if UnicodeWidthStr::width(compact_label.as_ref()) <= available {
+    let compact = if text_width(compact_label.as_ref()) <= available {
         compact_label.into_owned()
     } else if available >= 7 {
         rust_i18n::t!("tui.ui.footer.cold_failed.keys").into_owned()
@@ -574,7 +576,7 @@ fn render_main_row(
     summary: ResponsiveLine,
 ) {
     let left_width = if sort_controls.is_empty() {
-        leading.as_deref().map_or(0, UnicodeWidthStr::width)
+        leading.as_deref().map_or(0, text_width)
     } else {
         sort_controls_width(sort_controls)
     };
@@ -623,10 +625,10 @@ fn render_main_row(
 }
 
 fn sort_controls_width(sort_controls: &[SortControl]) -> usize {
-    rust_i18n::t!("tui.ui.footer.sort_prefix").width()
+    text_width(rust_i18n::t!("tui.ui.footer.sort_prefix").as_ref())
         + sort_controls
             .iter()
-            .map(|control| control.label.width())
+            .map(|control| text_width(control.label.as_ref()))
             .sum::<usize>()
         + sort_controls.len().saturating_sub(1)
 }
@@ -643,7 +645,7 @@ fn render_sort_controls(
         sort_prefix.clone(),
         Style::default().fg(app.theme.text.secondary),
     )];
-    let mut x_offset = area.x.saturating_add(sort_prefix.width() as u16);
+    let mut x_offset = area.x.saturating_add(width_u16(sort_prefix.as_ref()));
 
     for (index, control) in sort_controls.iter().enumerate() {
         if index > 0 {
@@ -659,7 +661,7 @@ fn render_sort_controls(
         };
         spans.push(Span::styled(control.label.clone(), style));
 
-        let label_width = control.label.width() as u16;
+        let label_width = width_u16(control.label.as_ref());
         artifacts.add_hit_target(
             Rect::new(x_offset, area.y, label_width, 1),
             Intent::Sort(control.field),
@@ -1274,10 +1276,10 @@ mod tests {
     #[test]
     fn help_line_progressively_expands_labels_with_available_width() {
         let help = progressive_help_line();
-        let compact_width = "a·b·q".width();
-        let first_expanded_width = "alpha·b·q".width();
-        let tight_full_width = "alpha·bravo·q".width();
-        let full_width = "alpha • bravo • q".width();
+        let compact_width = text_width("a·b·q");
+        let first_expanded_width = text_width("alpha·b·q");
+        let tight_full_width = text_width("alpha·bravo·q");
+        let full_width = text_width("alpha • bravo • q");
 
         assert_eq!(
             line_text(help.for_width(compact_width.saturating_sub(1))),
@@ -1306,7 +1308,7 @@ mod tests {
             style,
         );
 
-        assert_eq!(line_text(help.for_width("x·mid·q".width())), "x·mid·q");
+        assert_eq!(line_text(help.for_width(text_width("x·mid·q"))), "x·mid·q");
     }
 
     #[test]
@@ -1320,7 +1322,7 @@ mod tests {
             " • ",
             style,
         );
-        let width = "操作·q".width();
+        let width = text_width("操作·q");
         let line = help.for_width(width);
 
         assert_eq!(line_text(line.clone()), "操作·q");
@@ -1330,7 +1332,7 @@ mod tests {
     #[test]
     fn help_line_never_exceeds_its_width_budget() {
         let help = progressive_help_line();
-        let full_width = "alpha • bravo • q".width();
+        let full_width = text_width("alpha • bravo • q");
 
         for width in 0..=full_width {
             let line = help.for_width(width);

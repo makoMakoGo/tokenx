@@ -25,15 +25,6 @@ fn weekday_labels() -> [Cow<'static, str>; 7] {
     ]
 }
 
-/// Compile-time-embedded rust-i18n translations always resolve to a borrowed
-/// `&'static str`; unwrap the `Cow` for APIs that require `&'static str`.
-fn borrowed_static(text: Cow<'static, str>) -> &'static str {
-    match text {
-        Cow::Borrowed(text) => text,
-        Cow::Owned(text) => Box::leak(text.into_boxed_str()),
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 struct WeekdayUsage {
     label: Cow<'static, str>,
@@ -179,7 +170,7 @@ pub(crate) fn build_daily_profile_lines(app: &TuiModel, area_width: u16) -> Vec<
     if let Some(peak) = peak {
         lines.push(usage_profile::peak_line(
             app,
-            borrowed_static(rust_i18n::t!("tui.ui.daily.peak_day")),
+            rust_i18n::t!("tui.ui.daily.peak_day"),
             peak.label.to_string(),
             peak.tokens,
             peak.cost,

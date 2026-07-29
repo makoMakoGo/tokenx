@@ -379,7 +379,7 @@ mod tests {
         app.replace_subscription_errors_for_test(vec![crate::subscription::SubscriptionError {
             provider_id: Some(crate::subscription::ProviderId::Claude),
             provider: "Claude".to_string(),
-            message: "credential expired".to_string(),
+            issue: crate::subscription::SubscriptionIssue::unexpected("credential expired"),
         }]);
 
         let set = action_set(&app, &PageStates::default());
