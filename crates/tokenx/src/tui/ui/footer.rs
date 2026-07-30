@@ -912,6 +912,13 @@ fn subscription_help_line(app: &TuiModel, actions: &ActionSet) -> HelpLine {
             Style::default().fg(app.theme.chrome.focus),
         ));
     }
+    if actions.contains(Action::Language) {
+        items.push(HelpItem::new(
+            format!("[L:{}]", app.language().native_name()),
+            "[L]",
+            Style::default().fg(app.theme.chrome.focus),
+        ));
+    }
     if actions.contains(Action::Quit) {
         items.push(HelpItem::new(
             "q",
@@ -996,6 +1003,10 @@ pub(super) fn action_help_row_line(
                 format!("[p:{}]", theme_label(app.theme.name)),
                 "[p]".to_string(),
             ),
+            Action::Language => (
+                format!("[L:{}]", app.language().native_name()),
+                "[L]".to_string(),
+            ),
             Action::ToggleAutoRefresh => (
                 if app.auto_refresh_enabled() {
                     rust_i18n::t!(
@@ -1064,7 +1075,9 @@ fn toggle_action_labels(
 fn action_style(app: &TuiModel, action: Action) -> Style {
     let color = match action {
         Action::Sort(_) => app.theme.chrome.current,
-        Action::Clients | Action::GroupBy | Action::Theme => app.theme.chrome.focus,
+        Action::Clients | Action::GroupBy | Action::Theme | Action::Language => {
+            app.theme.chrome.focus
+        }
         Action::ToggleAutoRefresh if app.auto_refresh_enabled() => app.theme.status.success,
         Action::OpenDetails | Action::Back | Action::ToggleView | Action::RefreshLocal => {
             app.theme.chrome.focus
@@ -1430,6 +1443,10 @@ mod tests {
             Some(app.theme.chrome.focus)
         );
         assert_eq!(
+            action_style(&app, Action::Language).fg,
+            Some(app.theme.chrome.focus)
+        );
+        assert_eq!(
             action_style(&app, Action::Scroll).fg,
             Some(app.theme.text.secondary)
         );
@@ -1533,6 +1550,7 @@ mod tests {
         assert!(text.contains("[u:refresh]"));
         assert!(text.contains("←→/tab view"));
         assert!(text.contains("[p:theme]"));
+        assert!(text.contains("[L:English]"));
         assert!(text.ends_with('q'));
         for local in ["[r:", "[R:", "[e:"] {
             assert!(!text.contains(local), "{text}");
@@ -1550,6 +1568,7 @@ mod tests {
         assert!(!text.contains("[u:refresh]"));
         assert!(text.contains("←→/tab view"));
         assert!(text.contains("[p:theme]"));
+        assert!(text.contains("[L:English]"));
         assert!(text.ends_with('q'));
         assert!(!text.contains("local"));
     }
@@ -1566,6 +1585,7 @@ mod tests {
         assert!(!text.contains("[u]"));
         assert!(text.contains("←→/tab view"));
         assert!(text.contains("[p:theme]"));
+        assert!(text.contains("[L:English]"));
         assert!(text.ends_with('q'));
         assert!(!text.contains("local"));
     }

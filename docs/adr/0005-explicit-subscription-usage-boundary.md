@@ -64,7 +64,7 @@ The TUI lifecycle is:
 - entering Subscription starts at most one automatic fetch in a TUI session;
 - `u` explicitly starts a Subscription Usage fetch;
 - Subscription accepts only subscription actions plus shell navigation, theme,
-  and quit actions;
+  language, and quit actions;
 - local-usage `r`, `R`, `+`, `-`, and `e` actions are unavailable while Subscription
   is active; and
 - Subscription Usage is never polled in the background.

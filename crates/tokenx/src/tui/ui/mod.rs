@@ -521,6 +521,7 @@ mod tests {
         assert_eq!(summary_row.chars().nth(width as usize - 1), Some('│'));
         assert!(footer.contains("[u:refresh]"), "{footer}");
         assert!(footer.contains("[p:theme]"), "{footer}");
+        assert!(footer.contains("[L:English]"), "{footer}");
         assert!(!footer.contains("tokens"), "{footer}");
         assert!(!footer.contains("$0.00"), "{footer}");
         for local_hint in ["r:local", "R:local", "e:local"] {

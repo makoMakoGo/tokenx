@@ -74,6 +74,7 @@ tui:
       refresh_requested: "已请求刷新"
       sorted_by: "已按 %{field} %{direction} 排序"
       theme: "主题：%{theme}"
+      language: "语言：%{language}"
       clients_unavailable_loading: "本地数据加载完成前，客户端过滤不可用"
       group_by_unavailable_loading: "本地数据加载完成前，分组依据不可用"
       model_details_unavailable_loading: "本地数据加载完成前，模型详情不可用"

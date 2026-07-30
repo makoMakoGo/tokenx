@@ -322,6 +322,10 @@ impl Settings {
         self.color_palette = theme;
     }
 
+    pub fn set_language(&mut self, language: Language) {
+        self.language = Some(language);
+    }
+
     pub fn configured_auto_refresh_interval(&self) -> Duration {
         Duration::from_millis(self.auto_refresh_ms)
     }

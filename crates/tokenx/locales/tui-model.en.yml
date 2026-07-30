@@ -74,6 +74,7 @@ tui:
       refresh_requested: "Refresh requested"
       sorted_by: "Sorted by %{field} %{direction}"
       theme: "Theme: %{theme}"
+      language: "Language: %{language}"
       clients_unavailable_loading: "Clients are unavailable until local data finishes loading"
       group_by_unavailable_loading: "Group By is unavailable until local data finishes loading"
       model_details_unavailable_loading: "Model details are unavailable until local data finishes loading"

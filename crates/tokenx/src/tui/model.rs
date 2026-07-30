@@ -39,6 +39,7 @@ use super::session_data::SessionSnapshot;
 use super::themes::{Theme, ThemeName};
 use super::ui::dialog::{ClientPickerDialog, DialogResult, DialogStack, UiCommand};
 use crate::date_display::{format_period_label, format_year_month_day};
+use crate::i18n::Language;
 use crate::product_paths::ProductPaths;
 use crate::settings::Settings;
 use crate::subscription::{
@@ -429,6 +430,7 @@ pub struct TuiModel {
     pub current_tab: Tab,
     pub theme: Theme,
     pub settings: Settings,
+    language: Language,
     product_paths: ProductPaths,
     local_usage: LocalUsageState,
 
@@ -518,6 +520,7 @@ impl TuiModel {
     ) -> Result<Self> {
         let theme_name = config.theme.unwrap_or(settings.color_palette);
         let theme = Theme::from_name(theme_name);
+        let language = crate::i18n::active_language();
 
         let client_universe = config.client_universe.clone();
         let effective_date = config.effective_date;
@@ -571,6 +574,7 @@ impl TuiModel {
             current_tab,
             theme,
             settings,
+            language,
             product_paths,
             local_usage,
             sort_field,
@@ -613,6 +617,10 @@ impl TuiModel {
 
     pub(crate) fn is_background_loading(&self) -> bool {
         self.refresh_status.loading()
+    }
+
+    pub(crate) fn language(&self) -> Language {
+        self.language
     }
 
     pub(crate) fn background_load_elapsed(&self) -> Option<Duration> {
@@ -840,10 +848,14 @@ impl TuiModel {
     ) {
         self.settings.auto_refresh_enabled = automatic;
         self.settings.auto_refresh_ms = interval.as_millis() as u64;
+        self.queue_settings_persistence(message);
+    }
+
+    fn queue_settings_persistence(&mut self, success_message: String) {
         self.effects.push_back(TuiEffect::PersistSettings {
             settings: self.settings.clone(),
             paths: self.product_paths.clone(),
-            success_message: message,
+            success_message,
         });
     }
 
@@ -1427,6 +1439,7 @@ impl TuiModel {
             }
             Intent::Sort(field) => self.set_sort(field),
             Intent::Theme => self.cycle_theme(),
+            Intent::Language => self.cycle_language(),
             Intent::RefreshLocal if self.current_tab != Tab::Subscription => {
                 self.refresh_requests.push_back(RefreshRequest::Manual);
                 let msg = if self.is_background_loading() {
@@ -2057,15 +2070,30 @@ impl TuiModel {
         self.theme = Theme::from_name(new_theme);
         self.dialog_stack.set_theme(self.theme.clone());
         self.settings.set_theme(new_theme);
-        self.effects.push_back(TuiEffect::PersistSettings {
-            settings: self.settings.clone(),
-            paths: self.product_paths.clone(),
-            success_message: rust_i18n::t!(
-                "tui.model.status.theme",
-                theme = theme_label(new_theme)
+        self.queue_settings_persistence(
+            rust_i18n::t!("tui.model.status.theme", theme = theme_label(new_theme)).into_owned(),
+        );
+    }
+
+    fn cycle_language(&mut self) {
+        let language = self.language.next();
+        crate::i18n::set_active_language(language);
+        self.prepare_language_change(language);
+    }
+
+    fn prepare_language_change(&mut self, language: Language) {
+        self.language = language;
+        self.settings.set_language(language);
+        self.subscription_status_message = None;
+        self.subscription_status_message_time = None;
+        self.queue_settings_persistence(
+            rust_i18n::t!(
+                "tui.model.status.language",
+                locale = language.as_str(),
+                language = language.native_name()
             )
             .into_owned(),
-        });
+        );
     }
 
     fn open_client_picker(&mut self) {
@@ -4990,6 +5018,34 @@ mod tests {
         let effects = app.take_effects();
         assert_eq!(effects.len(), 1);
         assert!(matches!(&effects[0], TuiEffect::PersistSettings { .. }));
+    }
+
+    #[test]
+    fn language_transition_updates_the_snapshot_and_queues_persistence() {
+        let mut app = make_app();
+        let settings_path = app.product_paths.settings_file();
+        app.set_subscription_status_with_tone("stale language", StatusTone::Info);
+
+        app.prepare_language_change(Language::ZhCn);
+
+        assert_eq!(app.language(), Language::ZhCn);
+        assert_eq!(app.settings.language, Some(Language::ZhCn));
+        assert!(app.subscription_status_message.is_none());
+        assert!(!settings_path.exists());
+
+        let effects = app.take_effects();
+        assert_eq!(effects.len(), 1);
+        match &effects[0] {
+            TuiEffect::PersistSettings {
+                settings,
+                success_message,
+                ..
+            } => {
+                assert_eq!(settings.language, Some(Language::ZhCn));
+                assert_eq!(success_message, "语言：中文");
+            }
+            effect => panic!("unexpected effect: {effect:?}"),
+        }
     }
 
     #[test]

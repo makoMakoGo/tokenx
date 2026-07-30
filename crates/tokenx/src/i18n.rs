@@ -88,6 +88,20 @@ impl Language {
             Self::ZhCn => "zh-CN",
         }
     }
+
+    pub(crate) const fn next(self) -> Self {
+        match self {
+            Self::En => Self::ZhCn,
+            Self::ZhCn => Self::En,
+        }
+    }
+
+    pub(crate) const fn native_name(self) -> &'static str {
+        match self {
+            Self::En => "English",
+            Self::ZhCn => "中文",
+        }
+    }
 }
 
 /// Resolve the active locale with the documented priority:
@@ -105,6 +119,15 @@ pub(crate) fn resolve_locale(cli: Option<Language>, settings: Option<Language>) 
 /// Set the process locale from the same priority chain as [`resolve_locale`].
 pub(crate) fn init(cli: Option<Language>, settings: Option<Language>) {
     rust_i18n::set_locale(resolve_locale(cli, settings));
+}
+
+pub(crate) fn active_language() -> Language {
+    parse_language_value(&rust_i18n::locale())
+        .expect("the active interface locale must be a supported canonical language")
+}
+
+pub(crate) fn set_active_language(language: Language) {
+    rust_i18n::set_locale(language.as_str());
 }
 
 fn detect_env_locale() -> &'static str {
@@ -219,6 +242,14 @@ mod tests {
             Language::ZhCn
         );
         assert!(serde_json::from_str::<Language>(r#""zh""#).is_err());
+    }
+
+    #[test]
+    fn language_cycle_and_native_names_are_closed_over_supported_values() {
+        assert_eq!(Language::En.next(), Language::ZhCn);
+        assert_eq!(Language::ZhCn.next(), Language::En);
+        assert_eq!(Language::En.native_name(), "English");
+        assert_eq!(Language::ZhCn.native_name(), "中文");
     }
 
     #[test]
