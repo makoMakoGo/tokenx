@@ -1,8 +1,9 @@
 //! Locale-neutral Subscription diagnostics.
 //!
 //! Backend code records a stable semantic code, canonical English diagnostic,
-//! and structured interpolation fields. Presentation adapters choose the
-//! locale; provider tasks and cache I/O never read process locale state.
+//! structured interpolation fields, and typed nested causes. Presentation
+//! adapters choose the locale; provider tasks and cache I/O never read process
+//! locale state.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SubscriptionIssueCode {
@@ -73,6 +74,7 @@ pub(crate) struct SubscriptionIssue {
     code: SubscriptionIssueCode,
     message: String,
     fields: Vec<(&'static str, String)>,
+    cause: Option<Box<Self>>,
 }
 
 impl SubscriptionIssue {
@@ -81,6 +83,7 @@ impl SubscriptionIssue {
             code,
             message: message.into(),
             fields: Vec::new(),
+            cause: None,
         }
     }
 
@@ -100,6 +103,11 @@ impl SubscriptionIssue {
         self
     }
 
+    pub(crate) fn with_cause(mut self, cause: Self) -> Self {
+        self.cause = Some(Box::new(cause));
+        self
+    }
+
     pub(crate) const fn code(&self) -> SubscriptionIssueCode {
         self.code
     }
@@ -108,6 +116,10 @@ impl SubscriptionIssue {
         self.fields
             .iter()
             .find_map(|(field, value)| (*field == name).then_some(value.as_str()))
+    }
+
+    pub(crate) fn cause(&self) -> Option<&Self> {
+        self.cause.as_deref()
     }
 
     pub(crate) fn message(&self) -> &str {
@@ -121,4 +133,10 @@ impl std::fmt::Display for SubscriptionIssue {
     }
 }
 
-impl std::error::Error for SubscriptionIssue {}
+impl std::error::Error for SubscriptionIssue {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.cause
+            .as_deref()
+            .map(|cause| cause as &(dyn std::error::Error + 'static))
+    }
+}

@@ -249,12 +249,18 @@ fn issue_message_for_locale(issue: &SubscriptionIssue, locale: &str) -> String {
             path = field("path")
         )
         .into_owned(),
-        SubscriptionIssueCode::ClaudeNoHomeOrKeychain => rust_i18n::t!(
-            "subscription.error.claude_no_home_or_keychain",
-            locale = locale,
-            error = field("error")
-        )
-        .into_owned(),
+        SubscriptionIssueCode::ClaudeNoHomeOrKeychain => {
+            let error = issue
+                .cause()
+                .map(|cause| issue_message_for_locale(cause, locale))
+                .unwrap_or_else(|| field("error").to_string());
+            rust_i18n::t!(
+                "subscription.error.claude_no_home_or_keychain",
+                locale = locale,
+                error = error
+            )
+            .into_owned()
+        }
         SubscriptionIssueCode::ClaudeNoCredentials => {
             rust_i18n::t!("subscription.error.claude_no_credentials", locale = locale).into_owned()
         }
@@ -574,6 +580,44 @@ mod tests {
         assert_eq!(
             issue_message_for_locale(&issue, "en"),
             "provider fetch exceeded the 30s overall timeout"
+        );
+    }
+
+    #[test]
+    fn nested_keychain_issues_localize_at_every_level() {
+        let mac_only = SubscriptionIssue::new(
+            SubscriptionIssueCode::ClaudeNoHomeOrKeychain,
+            "No Claude credentials found: the home directory is unavailable and the keychain lookup failed: Keychain lookup is only available on macOS",
+        )
+        .with_cause(SubscriptionIssue::new(
+            SubscriptionIssueCode::KeychainMacOnly,
+            "Keychain lookup is only available on macOS",
+        ));
+
+        assert_eq!(
+            issue_message_for_locale(&mac_only, "zh-CN"),
+            "未找到 Claude 凭据：主目录不可用且钥匙串查询失败：钥匙串查询仅在 macOS 上可用"
+        );
+        assert_eq!(
+            issue_message_for_locale(&mac_only, "en"),
+            "No Claude credentials found: the home directory is unavailable and the keychain lookup failed: Keychain lookup is only available on macOS"
+        );
+
+        let lookup_failed = SubscriptionIssue::new(
+            SubscriptionIssueCode::ClaudeNoHomeOrKeychain,
+            "No Claude credentials found: the home directory is unavailable and the keychain lookup failed: Keychain lookup failed for service 'Claude Code-credentials'",
+        )
+        .with_cause(
+            SubscriptionIssue::new(
+                SubscriptionIssueCode::KeychainLookupFailed,
+                "Keychain lookup failed for service 'Claude Code-credentials'",
+            )
+            .with_field("service", "Claude Code-credentials"),
+        );
+
+        assert_eq!(
+            issue_message_for_locale(&lookup_failed, "zh-CN"),
+            "未找到 Claude 凭据：主目录不可用且钥匙串查询失败：服务 'Claude Code-credentials' 的钥匙串查询失败"
         );
     }
 }

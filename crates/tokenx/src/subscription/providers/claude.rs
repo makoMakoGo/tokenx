@@ -48,6 +48,16 @@ fn credentials_path() -> Option<PathBuf> {
     credentials_path_for_home(dirs::home_dir().as_deref())
 }
 
+fn no_home_or_keychain_issue(error: &anyhow::Error) -> SubscriptionIssue {
+    SubscriptionIssue::new(
+        SubscriptionIssueCode::ClaudeNoHomeOrKeychain,
+        format!(
+            "No Claude credentials found: the home directory is unavailable and the keychain lookup failed: {error}"
+        ),
+    )
+    .with_cause(SubscriptionIssue::from_anyhow(error))
+}
+
 fn read_credentials() -> Result<Credentials> {
     let path = credentials_path();
     if let Some(path) = path.as_ref().filter(|path| path.exists()) {
@@ -68,15 +78,7 @@ fn read_credentials() -> Result<Credentials> {
     }
     match read_keychain() {
         Ok(content) => Ok(serde_json::from_str(&content)?),
-        Err(error) if path.is_none() => Err(anyhow::Error::new(
-            SubscriptionIssue::new(
-                SubscriptionIssueCode::ClaudeNoHomeOrKeychain,
-                format!(
-                    "No Claude credentials found: the home directory is unavailable and the keychain lookup failed: {error}"
-                ),
-            )
-            .with_field("error", error),
-        )),
+        Err(error) if path.is_none() => Err(anyhow::Error::new(no_home_or_keychain_issue(&error))),
         Err(error) => Err(error).context(SubscriptionIssue::new(
             SubscriptionIssueCode::ClaudeNoCredentials,
             "No Claude credentials found in the current provider locations",
@@ -184,5 +186,22 @@ mod tests {
     #[test]
     fn missing_home_does_not_create_a_relative_credentials_path() {
         assert_eq!(credentials_path_for_home(None), None);
+    }
+
+    #[test]
+    fn missing_home_preserves_the_typed_keychain_failure() {
+        let keychain_issue = SubscriptionIssue::new(
+            SubscriptionIssueCode::KeychainLookupFailed,
+            "Keychain lookup failed for service 'Claude Code-credentials'",
+        )
+        .with_field("service", "Claude Code-credentials");
+        let error = anyhow::Error::new(keychain_issue);
+
+        let issue = no_home_or_keychain_issue(&error);
+
+        assert_eq!(issue.code(), SubscriptionIssueCode::ClaudeNoHomeOrKeychain);
+        let cause = issue.cause().expect("typed keychain cause");
+        assert_eq!(cause.code(), SubscriptionIssueCode::KeychainLookupFailed);
+        assert_eq!(cause.field("service"), Some("Claude Code-credentials"));
     }
 }
