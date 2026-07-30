@@ -29,6 +29,25 @@ tui:
       direction:
         ascending: "Ascending"
         descending: "Descending"
+    display:
+      group_by:
+        model: "model"
+        client_model: "client,model"
+        client_provider_model: "client,provider,model"
+        workspace_model: "workspace,model"
+      theme:
+        green: "green"
+        halloween: "halloween"
+        teal: "teal"
+        blue: "blue"
+        pink: "pink"
+        purple: "purple"
+        orange: "orange"
+        monochrome: "monochrome"
+        ylgnbu: "ylgnbu"
+        graphite: "graphite"
+        lagoon: "lagoon"
+        dusk: "dusk"
     unknown_workspace: "Unknown workspace"
     pricing:
       cached_fallback: "Pricing refresh failed; using cached rates"

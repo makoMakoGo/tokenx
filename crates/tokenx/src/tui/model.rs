@@ -24,6 +24,7 @@ use super::data::{
     AgentEntry, DailyUsage, HourlyUsage, OverviewSummary, PeriodKind, PeriodUsage, UsageModelEntry,
     UsageProjection,
 };
+use super::display_labels::{group_by_label, theme_label};
 use super::effect::{EffectOutcome, TuiEffect};
 use super::generation_controller::{RefreshControl, RefreshRequest, RefreshStatus};
 use super::intent::Intent;
@@ -982,7 +983,10 @@ impl TuiModel {
             self.set_generation_status_with_tone(status, tone);
         } else {
             self.set_generation_status_with_tone(
-                &rust_i18n::t!("tui.model.status.regrouped", group_by = group_by),
+                &rust_i18n::t!(
+                    "tui.model.status.regrouped",
+                    group_by = group_by_label(group_by)
+                ),
                 StatusTone::Success,
             );
         }
@@ -2056,8 +2060,11 @@ impl TuiModel {
         self.effects.push_back(TuiEffect::PersistSettings {
             settings: self.settings.clone(),
             paths: self.product_paths.clone(),
-            success_message: rust_i18n::t!("tui.model.status.theme", theme = new_theme.as_str())
-                .into_owned(),
+            success_message: rust_i18n::t!(
+                "tui.model.status.theme",
+                theme = theme_label(new_theme)
+            )
+            .into_owned(),
         });
     }
 

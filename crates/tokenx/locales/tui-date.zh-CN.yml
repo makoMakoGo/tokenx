@@ -47,5 +47,4 @@ tui:
       format: "%{period}%{hour}点"
       am: "上午"
       pm: "下午"
-    week_range: "第%{week}周 %{start} - %{end}"
-    week_short: "第%{week}周"
+    week_range: "第%{week}周  %{start}–%{end}"

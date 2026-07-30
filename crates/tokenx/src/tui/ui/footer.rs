@@ -8,6 +8,7 @@ use super::widgets::{format_cost, format_tokens, truncate_display_width};
 use crate::terminal_text::{width as text_width, width_u16};
 use crate::tui::actions::{Action, ActionSet};
 use crate::tui::data::PeriodKind;
+use crate::tui::display_labels::{group_by_label, theme_label};
 use crate::tui::intent::Intent;
 use crate::tui::model::{SortField, StatusTone, Tab, TuiModel};
 use crate::tui::page_state::PageStates;
@@ -979,9 +980,12 @@ pub(super) fn action_help_row_line(
                 rust_i18n::t!("tui.ui.footer.help.clients").into_owned(),
                 "[s]".to_string(),
             ),
-            Action::GroupBy => (format!("[g:{}]", app.group_by()), "[g]".to_string()),
+            Action::GroupBy => (
+                format!("[g:{}]", group_by_label(app.group_by())),
+                "[g]".to_string(),
+            ),
             Action::Theme => (
-                format!("[p:{}]", app.theme.name.as_str()),
+                format!("[p:{}]", theme_label(app.theme.name)),
                 "[p]".to_string(),
             ),
             Action::ToggleAutoRefresh => (
@@ -1338,6 +1342,14 @@ mod tests {
             let line = help.for_width(width);
             assert!(line.width() <= width, "width {width}: {}", line_text(line));
         }
+    }
+
+    #[test]
+    fn chinese_profile_toggle_matches_the_profile_page_name() {
+        assert_eq!(
+            rust_i18n::t!("tui.ui.footer.toggle.profile", locale = "zh-CN"),
+            "概览"
+        );
     }
 
     fn installed_app_on(tab: Tab) -> TuiModel {

@@ -63,7 +63,7 @@ tui:
         hourly: "小时"
         daily: "天"
         view: "视图"
-        profile: "分布"
+        profile: "概览"
         table: "表格"
       status:
         refreshing: "正在后台刷新缓存数据..."

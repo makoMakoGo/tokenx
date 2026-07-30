@@ -29,6 +29,25 @@ tui:
       direction:
         ascending: "升序"
         descending: "降序"
+    display:
+      group_by:
+        model: "模型"
+        client_model: "客户端+模型"
+        client_provider_model: "客户端+提供商+模型"
+        workspace_model: "工作区+模型"
+      theme:
+        green: "绿色"
+        halloween: "万圣节"
+        teal: "青色"
+        blue: "蓝色"
+        pink: "粉色"
+        purple: "紫色"
+        orange: "橙色"
+        monochrome: "单色"
+        ylgnbu: "黄绿蓝"
+        graphite: "石墨"
+        lagoon: "泻湖"
+        dusk: "暮色"
     unknown_workspace: "未知工作区"
     pricing:
       cached_fallback: "定价刷新失败；使用缓存费率"

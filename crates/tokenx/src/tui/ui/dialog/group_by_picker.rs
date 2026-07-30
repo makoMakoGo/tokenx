@@ -10,6 +10,7 @@ use ratatui::{
 use tokenx_engine::GroupBy;
 
 use crate::terminal_text::width;
+use crate::tui::display_labels::group_by_label;
 use crate::tui::interaction::{HitMap, InteractionOutcome, ListInteraction, MoveCommand, WrapMode};
 use crate::tui::themes::Theme;
 
@@ -166,7 +167,7 @@ impl DialogContent for GroupByPickerDialog {
                 Style::default().fg(theme.text.secondary),
             ),
             Span::styled(
-                self.current.to_string(),
+                group_by_label(self.current),
                 Style::default().fg(theme.chrome.current),
             ),
         ]));

@@ -2,6 +2,7 @@ mod actions;
 mod colors;
 mod contrast;
 pub mod data;
+mod display_labels;
 mod effect;
 mod event;
 mod frame;

@@ -47,5 +47,4 @@ tui:
       format: "%{hour}%{period}"
       am: "am"
       pm: "pm"
-    week_range: "W%{week} %{start} - %{end}"
-    week_short: "W%{week}"
+    week_range: "Week%{week}  %{start}–%{end}"

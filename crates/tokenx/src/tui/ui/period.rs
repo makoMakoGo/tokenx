@@ -31,6 +31,7 @@ use tokenx_engine::ClientId;
 use tokenx_engine::GroupBy;
 
 const PERIOD_MIN_WIDTH: u16 = 6;
+const WEEKLY_PERIOD_MIN_WIDTH: u16 = 19;
 const PERIOD_MAX_WIDTH: u16 = 20;
 const DAYS_WIDTH: u16 = 5;
 const CLIENT_TOP_MIN_WIDTH: u16 = 10;
@@ -205,11 +206,16 @@ fn period_column_order(column: PeriodColumn) -> u16 {
 }
 
 fn period_columns(
+    kind: PeriodKind,
     has_turn_data: bool,
     period_content_width: u16,
     top_client_content_width: u16,
     top_model_content_width: u16,
 ) -> Vec<ResponsiveColumn<PeriodColumn>> {
+    let period_min_width = match kind {
+        PeriodKind::Monthly => PERIOD_MIN_WIDTH,
+        PeriodKind::Weekly => WEEKLY_PERIOD_MIN_WIDTH,
+    };
     let (
         top_client_priority,
         top_model_priority,
@@ -230,7 +236,7 @@ fn period_columns(
         ResponsiveColumn::measured_required(
             PeriodColumn::Period,
             period_column_order(PeriodColumn::Period),
-            PERIOD_MIN_WIDTH,
+            period_min_width,
             period_content_width,
             PERIOD_MAX_WIDTH,
         ),
@@ -324,12 +330,14 @@ fn period_columns(
 
 fn period_table_layout(
     table_width: u16,
+    kind: PeriodKind,
     has_turn_data: bool,
     period_content_width: u16,
     top_client_content_width: u16,
     top_model_content_width: u16,
 ) -> PeriodTableLayout {
     let specs = period_columns(
+        kind,
         has_turn_data,
         period_content_width,
         top_client_content_width,
@@ -817,6 +825,7 @@ fn render_period(
     let today = app.effective_date();
     let table_layout = period_table_layout(
         table_area.width,
+        kind,
         has_turn_data,
         period_content_width,
         top_client_content_width,
@@ -1024,7 +1033,7 @@ mod tests {
 
     #[test]
     fn very_narrow_period_layout_keeps_core_columns() {
-        let layout = period_table_layout(30, true, 19, 12, 16);
+        let layout = period_table_layout(30, PeriodKind::Monthly, true, 19, 12, 16);
 
         assert_eq!(layout.density, PeriodTableDensity::VeryCompact);
         assert_eq!(
@@ -1040,7 +1049,7 @@ mod tests {
 
     #[test]
     fn wider_period_layout_adds_context_before_cache_details() {
-        let layout = period_table_layout(92, true, 19, 12, 16);
+        let layout = period_table_layout(92, PeriodKind::Monthly, true, 19, 12, 16);
 
         assert!(layout.columns.contains(&PeriodColumn::ActiveDays));
         assert!(layout.columns.contains(&PeriodColumn::TopClient));
@@ -1052,7 +1061,7 @@ mod tests {
 
     #[test]
     fn period_layout_with_turn_uses_original_priority_prefix() {
-        let layout = period_table_layout(77, true, 19, 12, 16);
+        let layout = period_table_layout(77, PeriodKind::Monthly, true, 19, 12, 16);
 
         assert_eq!(
             layout.columns,
@@ -1071,7 +1080,7 @@ mod tests {
 
     #[test]
     fn period_layout_without_turn_uses_original_priority_prefix() {
-        let layout = period_table_layout(77, false, 19, 12, 16);
+        let layout = period_table_layout(77, PeriodKind::Monthly, false, 19, 12, 16);
 
         assert_eq!(
             layout.columns,
@@ -1086,6 +1095,13 @@ mod tests {
         );
         assert!(!layout.columns.contains(&PeriodColumn::Messages));
         assert!(!layout.columns.contains(&PeriodColumn::Input));
+    }
+
+    #[test]
+    fn very_narrow_weekly_layout_keeps_the_full_period_label() {
+        let layout = period_table_layout(30, PeriodKind::Weekly, true, 19, 12, 16);
+
+        assert_eq!(constraint_lengths(&layout.widths), vec![19, 10, 10]);
     }
 
     #[test]
