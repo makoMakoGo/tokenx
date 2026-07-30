@@ -42,7 +42,7 @@ tui:
     portraits:
       slogan:
         gpt: "最后还得找我~"
-        claude: "You are absolutely right!"
+        claude: "你说得完全正确！"
         gemini: "你真是太棒了"
         xai: "最大限度求真"
         mimo: "我流口水"
@@ -57,7 +57,7 @@ tui:
       heading: "工作最活跃的时段"
       no_data: "暂无数据"
       date_range: "%{start} 至 %{end}"
-      summary_tokens: "%{count} 个 token"
-      tokens_unit: " 个 token"
+      summary_tokens: "%{count} 个令牌"
+      tokens_unit: " 个令牌"
       switch_press: "按 "
       switch_to_table: " 切换到表格视图"

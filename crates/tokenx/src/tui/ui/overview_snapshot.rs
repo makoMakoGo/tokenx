@@ -1409,7 +1409,7 @@ mod tests {
 
         let lines = buffer_lines(&terminal);
         let screen = lines.join("\n");
-        assert!(screen.contains("Total Tokens"), "{screen}");
+        assert!(screen.contains("Total Token"), "{screen}");
         assert!(
             !screen.contains("Inputs Healthy"),
             "text fallback drops the Inputs Healthy fact: {screen}"
@@ -1420,7 +1420,7 @@ mod tests {
         );
         let metric_row = lines
             .iter()
-            .find(|line| line.contains("Total Tokens"))
+            .find(|line| line.contains("Total Token"))
             .expect("snapshot metric row should render");
         assert_eq!(metric_row.matches('│').count(), 2, "{metric_row}");
     }
@@ -1465,7 +1465,7 @@ mod tests {
         for index in [2, 5, 8, 11] {
             assert_eq!(text[index], "-".repeat(54), "separator at {index}");
         }
-        assert!(text[0].starts_with("Total Tokens"));
+        assert!(text[0].starts_with("Total Token"));
         assert!(text[6].starts_with("Input Data"));
         assert!(text[7].starts_with("Active Days"));
         assert!(text[9].starts_with("Models Eaten"));
@@ -1493,7 +1493,7 @@ mod tests {
             2,
             "separators should be dropped bottom-up first"
         );
-        assert!(text.iter().any(|line| line.starts_with("Total Tokens")));
+        assert!(text.iter().any(|line| line.starts_with("Total Token")));
         assert!(text.iter().any(|line| line.starts_with("Favorite Client")));
 
         let lines = left_lines(&app, &data, 54, 10);
@@ -1505,7 +1505,7 @@ mod tests {
         let lines = left_lines(&app, &data, 54, 8);
         let text = lines.iter().map(line_text).collect::<Vec<_>>();
         assert_eq!(text.len(), 8);
-        assert!(text[0].starts_with("Total Tokens"));
+        assert!(text[0].starts_with("Total Token"));
         assert!(text.iter().any(|line| line.starts_with("Active Days")));
         assert!(text.iter().all(|line| !line.contains("Favorite Client")));
     }

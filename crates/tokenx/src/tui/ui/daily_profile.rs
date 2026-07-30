@@ -325,14 +325,14 @@ mod tests {
 
         assert!(text[0].contains("2026-07-13 to 2026-07-17"));
         assert!(text[1].contains("2 active days"));
-        assert!(text[1].contains("1K tokens"));
+        assert!(text[1].contains("1K token"));
         assert!(text[1].contains("$10.00"));
         assert!(text[3].starts_with("Monday"));
         assert!(text[7].starts_with("Friday"));
         assert!(text[7].contains("600"));
         assert!(text[7].contains("60.0%"));
         assert!(text[11].contains("Peak day Friday"));
-        assert!(text[11].contains("600 tokens"));
+        assert!(text[11].contains("600 token"));
         assert!(text[11].contains("$6.00"));
         assert!(text[13].contains("[v]"));
     }

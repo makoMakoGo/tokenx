@@ -5,7 +5,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Padding, Paragraph};
 
 use super::widgets::{format_cost, format_tokens, truncate_display_width};
-use crate::terminal_text::{width as text_width, width_u16};
+use crate::terminal_text::{pad_left, width as text_width, width_u16};
 use crate::tui::actions::{Action, ActionSet};
 use crate::tui::data::PeriodKind;
 use crate::tui::display_labels::{group_by_label, theme_label};
@@ -465,8 +465,8 @@ fn timed_activity_line(
     const MIN_WAVE_WIDTH: usize = 56;
     const TIMER_WIDTH: usize = 4;
 
-    let elapsed = format!("{elapsed_secs}s");
-    let elapsed = format!("{elapsed:>TIMER_WIDTH$}");
+    let elapsed = elapsed_label_for_locale(elapsed_secs, &rust_i18n::locale());
+    let elapsed = pad_left(elapsed.as_ref(), TIMER_WIDTH);
     let plain = format!("{message} ·{elapsed}");
     let decorated = format!("{WAVE}  {plain}  {WAVE}");
     let available = width as usize;
@@ -512,6 +512,14 @@ fn timed_activity_line(
         truncate_display_width(&compact, available),
         Style::default().fg(app.theme.text.secondary),
     ))
+}
+
+fn elapsed_label_for_locale(elapsed_secs: u64, locale: &str) -> Cow<'static, str> {
+    rust_i18n::t!(
+        "tui.ui.footer.activity.elapsed",
+        locale = locale,
+        secs = elapsed_secs.to_string()
+    )
 }
 
 fn cold_failed_line(app: &TuiModel, width: u16) -> Line<'static> {
@@ -1232,6 +1240,12 @@ mod tests {
     use crate::tui::data::{DailyUsage, UsageModelEntry, UsageTokenBreakdown};
     use crate::tui::model::TuiConfig;
     use chrono::NaiveDate;
+
+    #[test]
+    fn elapsed_timer_unit_uses_the_requested_locale() {
+        assert_eq!(elapsed_label_for_locale(12, "en"), "12s");
+        assert_eq!(elapsed_label_for_locale(12, "zh-CN"), "12秒");
+    }
 
     fn make_cold_app_on(tab: Tab) -> TuiModel {
         let config = TuiConfig {

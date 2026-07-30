@@ -360,7 +360,7 @@ mod tests {
             centered_row
         );
         assert!(!screen.contains("No usage in the current view"));
-        assert!(!screen.contains("Total Tokens"));
+        assert!(!screen.contains("Total Token"));
         assert!(!screen.contains("Scope:"), "{screen}");
     }
 
@@ -587,7 +587,7 @@ mod tests {
         assert!(footer.contains("[q] Quit"), "{footer}");
         // successful empty/zero tab states stay behind the Oops page
         assert!(!screen.contains("No usage in the current view"), "{screen}");
-        assert!(!screen.contains("Total Tokens"), "{screen}");
+        assert!(!screen.contains("Total Token"), "{screen}");
         // long diagnostics wrap across rows instead of clipping at the edge
         let head_row = lines
             .iter()
@@ -600,7 +600,7 @@ mod tests {
         // Diagnostics stay in the content area while footer actions remain concise.
         assert!(!footer.contains("injected cold failure"), "{footer}");
         assert!(!footer.contains("Scope:"), "{footer}");
-        assert!(!footer.contains("0 tokens"), "{footer}");
+        assert!(!footer.contains("0 token"), "{footer}");
     }
 
     #[test]
@@ -684,7 +684,7 @@ mod tests {
         // Snapshot header and hero total are the stable evidence that the
         // installed generation remains visible behind a warm refresh.
         assert!(
-            screen.contains("Snapshot") && screen.contains("77 tokens"),
+            screen.contains("Snapshot") && screen.contains("77 token"),
             "installed generation must keep the tab content visible: {screen}"
         );
         assert!(

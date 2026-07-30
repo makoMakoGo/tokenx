@@ -524,11 +524,18 @@ fn clamped_period_start(scroll_offset: usize, period_len: usize) -> usize {
     scroll_offset.min(period_len.saturating_sub(1))
 }
 
+fn period_detail_title_for_locale(label: Option<&str>, locale: &str) -> String {
+    match label {
+        Some(label) => {
+            rust_i18n::t!("tui.ui.period.detail.title", locale = locale, label = label).into_owned()
+        }
+        None => rust_i18n::t!("tui.ui.period.detail.title_default", locale = locale).into_owned(),
+    }
+}
+
 fn render_detail(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifacts, area: Rect) {
-    let title = app
-        .period_detail_label()
-        .map(|label| format!(" Period Detail: {} ", label))
-        .unwrap_or_else(|| " Period Detail ".to_string());
+    let label = app.period_detail_label();
+    let title = period_detail_title_for_locale(label.as_deref(), &rust_i18n::locale());
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -1360,5 +1367,18 @@ mod tests {
             "Workspace column must not render under GroupBy::Model\n{body}"
         );
         assert!(body.contains("gpt-5"), "expected bare model name\n{body}");
+    }
+
+    #[test]
+    fn period_detail_title_uses_the_requested_locale() {
+        assert_eq!(
+            period_detail_title_for_locale(Some("Week31  07/27–08/02"), "en"),
+            " Period Detail: Week31  07/27–08/02 "
+        );
+        assert_eq!(
+            period_detail_title_for_locale(Some("第31周  07/27–08/02"), "zh-CN"),
+            " 周期明细：第31周  07/27–08/02 "
+        );
+        assert_eq!(period_detail_title_for_locale(None, "zh-CN"), " 周期明细 ");
     }
 }

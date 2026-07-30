@@ -318,14 +318,14 @@ mod tests {
         let artifacts = draw_footer(&mut terminal, &mut app, &mut state);
 
         let screen = screen_text(&terminal);
-        assert!(screen.contains("Sort: Active Tokens Cost"));
+        assert!(screen.contains("Sort: Active Token Cost"));
         assert!(screen.contains("esc:back"));
         assert_sort_clicks(
             &terminal,
             &artifacts,
             &[
                 (SortField::Date, "Active"),
-                (SortField::Tokens, "Tokens"),
+                (SortField::Tokens, "Token"),
                 (SortField::Cost, "Cost"),
             ],
         );
@@ -362,7 +362,7 @@ mod tests {
         let artifacts = draw_footer(&mut terminal, &mut app, &mut state);
 
         let screen = screen_text(&terminal);
-        assert!(screen.contains("Sort: Date Cost Tokens"));
+        assert!(screen.contains("Sort: Date Cost Token"));
         assert!(screen.contains("[v:profile]"));
         assert_eq!(
             sort_clicks(&artifacts)

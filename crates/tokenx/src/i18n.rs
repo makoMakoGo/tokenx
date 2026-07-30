@@ -263,6 +263,28 @@ mod tests {
     }
 
     #[test]
+    fn tui_display_terminology_stays_consistent() {
+        assert_eq!(
+            rust_i18n::t!("tui.model.sort.field.tokens", locale = "en"),
+            "Token"
+        );
+        assert_eq!(
+            rust_i18n::t!("tui.model.sort.field.tokens", locale = "zh-CN"),
+            "令牌"
+        );
+
+        for (key, expected) in [
+            ("tui.model.tab.monthly", "月度"),
+            ("tui.model.tab.weekly", "周度"),
+            ("tui.model.tab.daily", "日度"),
+            ("tui.model.tab.hourly", "小时"),
+            ("tui.model.tab.agents", "代理"),
+        ] {
+            assert_eq!(rust_i18n::t!(key, locale = "zh-CN"), expected);
+        }
+    }
+
+    #[test]
     fn unsupported_locale_falls_back_to_english() {
         assert_eq!(
             rust_i18n::t!("cli.error.tui_tab_disabled", locale = "fr"),

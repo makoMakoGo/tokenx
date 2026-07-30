@@ -448,7 +448,7 @@ mod tests {
         let summary = line_text(&lines[1]);
 
         assert!(summary.contains("174 active days"));
-        assert!(summary.contains("36.4B tokens"));
+        assert!(summary.contains("36.4B token"));
         assert!(summary.contains("$20.5K"));
     }
 }

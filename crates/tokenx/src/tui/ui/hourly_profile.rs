@@ -297,7 +297,7 @@ mod tests {
 
         assert!(text[0].contains("2026-07-17 to 2026-07-18"));
         assert!(text[1].contains("2 active hours"));
-        assert!(text[1].contains("1K tokens"));
+        assert!(text[1].contains("1K token"));
         assert!(text[1].contains("$10.00"));
         assert!(text[3].starts_with("Morning"));
         assert!(text[3].contains("05:00-11:59"));

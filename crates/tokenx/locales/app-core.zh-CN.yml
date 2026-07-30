@@ -33,7 +33,7 @@ settings:
     create_dir: "无法创建设置目录 `%{path}`"
     auto_refresh_range: "autoRefreshMs %{value} 无效；应在 %{min}..=%{max} 范围内"
     invalid_scanner: "扫描器设置无效：%{source}"
-    duplicate_subscription_provider: "subscription.providers 中的订阅提供方 `%{provider}` 重复"
+    duplicate_subscription_provider: "subscription.providers 中的订阅提供商 `%{provider}` 重复"
 
 shared:
   client:

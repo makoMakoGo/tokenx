@@ -485,7 +485,7 @@ mod tests {
         let lines = buffer_lines(&terminal);
         let title_row = lines
             .iter()
-            .position(|line| line.contains("Tokens per Day"))
+            .position(|line| line.contains("Token per Day"))
             .expect("chart box title should render");
         let top_border = &lines[title_row];
         assert!(top_border.starts_with('┌'), "{top_border}");

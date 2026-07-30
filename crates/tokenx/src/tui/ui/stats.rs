@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use chrono::{Datelike, Timelike, Weekday};
@@ -38,6 +39,14 @@ fn legend_width(less_label: &str, more_label: &str) -> u16 {
         + CELL_WIDTH * CONTRIBUTION_GRADES.len() as u16
         + CONTRIBUTION_GRADES.len() as u16
         - 1
+}
+
+fn streak_days_for_locale(count: u32, locale: &str) -> Cow<'static, str> {
+    rust_i18n::t!(
+        "tui.ui.stats.metrics_days",
+        locale = locale,
+        count = count.to_string()
+    )
 }
 
 fn truncate_to_display_width(label: &str, max_width: usize) -> String {
@@ -319,7 +328,7 @@ fn render_graph_metrics(
                 Style::default().fg(app.theme.text.secondary),
             ),
             Span::styled(
-                format!("{}d", app.usage().current_streak),
+                streak_days_for_locale(app.usage().current_streak, &rust_i18n::locale()),
                 Style::default().fg(app.theme.metrics.total),
             ),
             Span::styled(
@@ -327,7 +336,7 @@ fn render_graph_metrics(
                 Style::default().fg(app.theme.text.secondary),
             ),
             Span::styled(
-                format!("{}d", app.usage().longest_streak),
+                streak_days_for_locale(app.usage().longest_streak, &rust_i18n::locale()),
                 Style::default().fg(app.theme.metrics.total),
             ),
             Span::styled(
@@ -831,6 +840,12 @@ mod tests {
     use chrono::NaiveDate;
     use ratatui::{backend::TestBackend, Terminal};
     use std::collections::BTreeSet;
+
+    #[test]
+    fn streak_day_unit_uses_the_requested_locale() {
+        assert_eq!(streak_days_for_locale(31, "en"), "31d");
+        assert_eq!(streak_days_for_locale(31, "zh-CN"), "31天");
+    }
 
     fn make_app(width: u16) -> TuiModel {
         let mut app = TuiModel::new_for_test(TuiConfig {

@@ -18,13 +18,13 @@ tui:
         option:
           model:
             label: "模型"
-            description: "每个模型一行；合并客户端与提供方（默认）"
+            description: "每个模型一行；合并客户端与提供商（默认）"
           client_model:
             label: "客户端 + 模型"
             description: "每个客户端-模型组合一行"
           client_provider_model:
-            label: "客户端 + 提供方 + 模型"
-            description: "保留提供方身份；不合并模型"
+            label: "客户端 + 提供商 + 模型"
+            description: "保留提供商身份；不合并模型"
           workspace_model:
             label: "工作区 + 模型"
             description: "先按工作区、再按模型分组本地用量"

@@ -28,10 +28,7 @@ pub fn render(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifacts
         .map(|t| {
             let name = tab_label(app, *t, label_mode);
             let style = if *t == app.current_tab {
-                Style::default()
-                    .fg(app.theme.surface.canvas)
-                    .bg(app.theme.chrome.nav_active)
-                    .add_modifier(Modifier::BOLD)
+                active_tab_style(app)
             } else {
                 Style::default().fg(app.theme.text.secondary)
             };
@@ -47,18 +44,19 @@ pub fn render(frame: &mut Frame, app: &TuiModel, artifacts: &mut RenderArtifacts
     let tabs = Tabs::new(titles)
         .block(block)
         .select(selected)
-        .highlight_style(
-            Style::default()
-                .fg(app.theme.surface.canvas)
-                .bg(app.theme.chrome.nav_active)
-                .add_modifier(Modifier::BOLD),
-        )
+        .highlight_style(active_tab_style(app))
         .padding(TAB_PADDING_LEFT, TAB_PADDING_RIGHT)
         .divider(tab_divider(app));
 
     frame.render_widget(tabs, area);
 
     register_tab_hit_targets(app, artifacts, tabs_area);
+}
+
+fn active_tab_style(app: &TuiModel) -> Style {
+    Style::default()
+        .fg(app.theme.chrome.nav_active)
+        .add_modifier(Modifier::BOLD)
 }
 
 fn header_block(app: &TuiModel) -> Block<'static> {
@@ -388,7 +386,7 @@ mod tests {
 
         assert_eq!(ThemeName::all().len(), 12);
 
-        let mut active_tab_colors = Vec::with_capacity(ThemeName::all().len());
+        let mut active_tab_accents = Vec::with_capacity(ThemeName::all().len());
         for &theme_name in ThemeName::all() {
             let mut app = make_app(120);
             app.theme = Theme::from_name(theme_name);
@@ -396,7 +394,6 @@ mod tests {
             let panel = app.theme.surface.panel;
             let heading = app.theme.chrome.heading;
             let nav_active = app.theme.chrome.nav_active;
-            let active_tab_foreground = app.theme.surface.canvas;
             let buffer = render_header_buffer(&mut app, Rect::new(0, 0, 120, 3), 120, 4);
 
             let panel_cell = buffer.cell((110, 1)).unwrap();
@@ -414,18 +411,18 @@ mod tests {
                 "{theme_name:?} active tab sample"
             );
             assert_eq!(
-                active_tab_cell.fg, active_tab_foreground,
+                active_tab_cell.fg, nav_active,
                 "{theme_name:?} active tab foreground"
             );
             assert_eq!(
-                active_tab_cell.bg, nav_active,
-                "{theme_name:?} active tab background"
+                active_tab_cell.bg, panel,
+                "{theme_name:?} active tab must keep the panel background"
             );
-            active_tab_colors.push((theme_name, active_tab_cell.bg));
+            active_tab_accents.push((theme_name, active_tab_cell.fg));
         }
 
-        for (index, &(theme_name, color)) in active_tab_colors.iter().enumerate() {
-            for &(other_theme_name, other_color) in &active_tab_colors[index + 1..] {
+        for (index, &(theme_name, color)) in active_tab_accents.iter().enumerate() {
+            for &(other_theme_name, other_color) in &active_tab_accents[index + 1..] {
                 let (Color::Rgb(red, green, blue), Color::Rgb(other_red, other_green, other_blue)) =
                     (color, other_color)
                 else {

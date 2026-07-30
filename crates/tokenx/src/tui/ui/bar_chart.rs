@@ -1,4 +1,4 @@
-//! Chromeless stacked bar chart for the Overview "Tokens per Day" panel.
+//! Chromeless stacked bar chart for the Overview "Token per Day" panel.
 //!
 //! Rendering contract (implemented in this module):
 //! - `area` is the whole chart content area inside a bordered box drawn by the

@@ -17,6 +17,15 @@ pub(crate) const MIN_AUTO_REFRESH_MS: u64 = 30_000;
 pub(crate) const MAX_AUTO_REFRESH_MS: u64 = 3_600_000;
 pub(crate) const AUTO_REFRESH_STEP_MS: u64 = 10_000;
 
+fn create_settings_dir_message_for_locale(path: &Path, locale: &str) -> String {
+    rust_i18n::t!(
+        "settings.error.create_dir",
+        locale = locale,
+        path = path.display().to_string()
+    )
+    .into_owned()
+}
+
 #[derive(Debug)]
 pub(crate) enum SettingsLoadError {
     Read {
@@ -225,7 +234,7 @@ impl Settings {
             .parent()
             .expect("settings path must have a configuration directory");
         fs::create_dir_all(parent).with_context(|| {
-            format!("failed to create settings directory `{}`", parent.display())
+            create_settings_dir_message_for_locale(parent, &rust_i18n::locale())
         })?;
         Ok(path)
     }
@@ -322,6 +331,19 @@ impl Settings {
 mod tests {
     use super::*;
     use std::error::Error as _;
+
+    #[test]
+    fn create_settings_directory_context_uses_the_requested_locale() {
+        let path = Path::new("/tmp/tokenx-settings");
+        assert_eq!(
+            create_settings_dir_message_for_locale(path, "en"),
+            "failed to create settings directory `/tmp/tokenx-settings`"
+        );
+        assert_eq!(
+            create_settings_dir_message_for_locale(path, "zh-CN"),
+            "无法创建设置目录 `/tmp/tokenx-settings`"
+        );
+    }
 
     fn load_test_path(path: &Path) -> std::result::Result<Settings, SettingsLoadError> {
         Settings::load_from_path(path)

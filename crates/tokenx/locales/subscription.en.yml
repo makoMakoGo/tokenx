@@ -58,7 +58,7 @@ subscription:
     codex_rejected: "Codex credentials were rejected. Run `codex login` to refresh the provider-owned authentication."
     codex_request_failed: "Codex usage request failed (HTTP %{status})"
     codex_auth_page: "Codex usage returned an authentication page. Run `codex login` to refresh the provider-owned authentication."
-    codex_no_tokens: "No Codex tokens."
+    codex_no_tokens: "No Codex token."
     codex_no_access_token: "No Codex access token."
     grok_no_home: "cannot locate the home directory for ~/.grok/auth.json"
     grok_read_credentials: "failed to read Grok credentials from %{path}"

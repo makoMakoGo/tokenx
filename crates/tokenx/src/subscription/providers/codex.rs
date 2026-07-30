@@ -180,7 +180,7 @@ async fn fetch_async(auth: Auth, client: &reqwest::Client) -> Result<Subscriptio
     let tokens = auth.tokens.ok_or_else(|| {
         anyhow::Error::new(SubscriptionIssue::new(
             SubscriptionIssueCode::CodexNoTokens,
-            "No Codex tokens.",
+            "No Codex token.",
         ))
     })?;
     let access_token = tokens
