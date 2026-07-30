@@ -117,8 +117,13 @@ pub(crate) fn format_year_month_day(date: NaiveDate) -> String {
 }
 
 pub(crate) fn format_timestamp(datetime: NaiveDateTime) -> String {
+    format_timestamp_for_locale(datetime, &rust_i18n::locale())
+}
+
+fn format_timestamp_for_locale(datetime: NaiveDateTime, locale: &str) -> String {
     rust_i18n::t!(
         "tui.date.timestamp",
+        locale = locale,
         month = format!("{:02}", datetime.month()),
         day = format!("{:02}", datetime.day()),
         hour = format!("{:02}", datetime.hour()),
@@ -215,6 +220,20 @@ mod tests {
                 format_weekly_period_label_for_locale(start, end, short, "zh-CN"),
                 "第31周  07/27–08/02"
             );
+        }
+    }
+
+    #[test]
+    fn timestamps_share_one_compact_numeric_contract() {
+        let datetime = NaiveDate::from_ymd_opt(2026, 7, 29)
+            .unwrap()
+            .and_hms_opt(20, 35, 0)
+            .unwrap();
+
+        for locale in ["en", "zh-CN"] {
+            let rendered = format_timestamp_for_locale(datetime, locale);
+            assert_eq!(rendered, "07/29 20:35");
+            assert_eq!(width_u16(&rendered), 11);
         }
     }
 

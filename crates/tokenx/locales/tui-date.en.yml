@@ -41,7 +41,7 @@ tui:
     day_weekday: "%{day} %{weekday}"
     full_date: "%{weekday}, %{month} %{day}, %{year}"
     year_month_day: "%{year}-%{month}-%{day}"
-    timestamp: "%{month}-%{day} %{hour}:%{minute}"
+    timestamp: "%{month}/%{day} %{hour}:%{minute}"
     time:
       format: "%{hour}%{period}"
       am: "am"
